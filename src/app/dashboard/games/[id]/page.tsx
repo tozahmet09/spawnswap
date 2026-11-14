@@ -13,7 +13,8 @@ import { CopyButton } from "@/components/CopyButton";
 import { Form } from "@/components/Form";
 import { TrailerUpload } from "@/components/TrailerUpload";
 import { DeleteGameButton } from "@/components/DeleteGameButton";
-import { cancelCampaign, createCampaign, refreshGame, setGameHidden, setReleaseDate, toggleCampaign } from "@/app/actions";
+import { cancelCampaign, createCampaign, refreshGame, setGameHidden, setReleaseDate, spendSpotlightDays, toggleCampaign } from "@/app/actions";
+import { planOf } from "@/lib/plans";
 import { isUpcoming, releaseLabel } from "@/lib/release";
 
 export const dynamic = "force-dynamic";
@@ -72,6 +73,8 @@ export default async function GamePage({
   const day = (n: number) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
   const [minDate, maxDate] = [day(1), day(366)];
   const running = game.campaigns.filter((c) => ["ACTIVE", "PAUSED"].includes(c.status));
+  const plan = planOf(user);
+  const stats = plan.stats ? await detailedStats(game.id) : null;
 
   return (
     <div className="space-y-8">
@@ -140,7 +143,7 @@ export default async function GamePage({
           <Form action={createCampaign} submit="Start" className="flex flex-wrap items-start gap-3" buttonClass="btn">
             <input type="hidden" name="gameId" value={game.id} />
             <input name="players" aria-label="Players wanted" type="number" min={1} defaultValue={Math.min(Math.max(user.credits, 1), 100)} className="input w-28" />
-            <Link href="/dashboard/billing" className="btn-quiet">Get credits</Link>
+            <Link href="/#earn-title" className="btn-quiet">Earn credits</Link>
           </Form>
           {game.campaigns.length > 0 && (
             <ul className="divide-y divide-line text-sm">
@@ -193,6 +196,28 @@ export default async function GamePage({
 
         <Step n={5} title="Spotlight on the homepage" done={featured} optional>
           {(needTrailer || !game.trailerUrl) && <p className="text-sm text-lime">Needs a trailer first (step 1).</p>}
+          {plan.id !== "FREE" ? (
+            <div className="space-y-2">
+              <p className="text-sm text-mute">
+                Your {plan.name} plan: <b className="text-cream tabular-nums">{user.spotlightDaysLeft}</b> free spotlight day{user.spotlightDaysLeft === 1 ? "" : "s"} left this month.
+              </p>
+              {user.spotlightDaysLeft > 0 && game.trailerUrl && (
+                <Form action={spendSpotlightDays} submit="Use free days" className="flex flex-wrap items-start gap-3" buttonClass="btn">
+                  <input type="hidden" name="gameId" value={game.id} />
+                  <select name="days" aria-label="Days" defaultValue={user.spotlightDaysLeft} className="input w-28">
+                    {Array.from({ length: user.spotlightDaysLeft }, (_, i) => i + 1).map((d) => (
+                      <option key={d} value={d}>{d} day{d > 1 ? "s" : ""}</option>
+                    ))}
+                  </select>
+                </Form>
+              )}
+              <p className="text-xs text-faint">Or buy extra days:</p>
+            </div>
+          ) : (
+            <p className="text-sm text-mute">
+              Pro and Max come with free spotlight days every month. <Link href="/pricing" className="text-lime underline-offset-4 hover:underline">See plans</Link>
+            </p>
+          )}
           <form action="/api/checkout" method="post" className="flex flex-wrap gap-3">
             <input type="hidden" name="kind" value="FEATURED" />
             <input type="hidden" name="gameId" value={game.id} />
@@ -204,6 +229,48 @@ export default async function GamePage({
           </form>
         </Step>
       </ol>
+
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold">Stats</h2>
+        {stats ? (
+          <div className="space-y-6">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm sm:grid-cols-4">
+              <Stat label="Real players" value={String(stats.players)} />
+              <Stat label="Avg time played" value={stats.avgMinutes ? `${stats.avgMinutes} min` : "—"} />
+              <Stat label="Finished 10 min" value={stats.started ? `${Math.round((stats.players / stats.started) * 100)}%` : "—"} hint={`${stats.players} of ${stats.started} who started`} />
+              <Stat label="Spawnswap visits, 30 days" value={String(stats.visits30)} />
+            </dl>
+            <div>
+              <p className="mb-2 text-xs text-mute">Real players per day, last 14 days</p>
+              <div className="flex h-20 items-end gap-1" role="img" aria-label="Players per day">
+                {stats.perDay.map((d) => (
+                  <div key={d.day} className="flex flex-1 flex-col items-center justify-end" title={`${d.day}: ${d.n}`}>
+                    <div className="w-full rounded-t-[3px] bg-lime/80" style={{ height: `${stats.maxDay ? Math.max((d.n / stats.maxDay) * 100, d.n ? 6 : 2) : 2}%` }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="max-w-sm space-y-1">
+              <p className="mb-2 text-xs text-mute">Ratings</p>
+              {[5, 4, 3, 2, 1].map((n) => (
+                <div key={n} className="flex items-center gap-2 text-xs">
+                  <span className="w-3 tabular-nums text-mute">{n}</span>
+                  <Star className="h-3 w-3 fill-lime text-lime" aria-hidden />
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-line">
+                    <div className="h-full bg-lime" style={{ width: `${stats.ratingTotal ? (stats.byStar[n] / stats.ratingTotal) * 100 : 0}%` }} />
+                  </div>
+                  <span className="w-6 text-right tabular-nums text-mute">{stats.byStar[n]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-mute">
+            See how long players stay, how many finish 10 minutes, daily players and your rating breakdown with Pro or Max.{" "}
+            <Link href="/pricing" className="text-lime underline-offset-4 hover:underline">See plans</Link>
+          </p>
+        )}
+      </section>
 
       <section className="space-y-4">
         <h2 className="text-xl font-bold">Players</h2>
@@ -273,4 +340,43 @@ export default async function GamePage({
       </section>
     </div>
   );
+}
+
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div title={hint}>
+      <dt className="text-xs text-mute">{label}</dt>
+      <dd className="mt-0.5 font-display text-2xl font-bold tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+/** Pro / Max: numbers about every player this game got, not just the last 50. */
+async function detailedStats(gameId: string) {
+  const since14 = new Date(Date.now() - 13 * 864e5);
+  since14.setUTCHours(0, 0, 0, 0);
+  const since30 = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+  const [done, started, recent, stars, visits30] = await Promise.all([
+    db.playTask.aggregate({ where: { gameId, status: "COMPLETED" }, _count: true, _avg: { playedSeconds: true } }),
+    db.playTask.count({ where: { gameId } }),
+    db.playTask.findMany({ where: { gameId, status: "COMPLETED", completedAt: { gte: since14 } }, select: { completedAt: true } }),
+    db.playTask.groupBy({ by: ["rating"], where: { gameId, status: "COMPLETED", rating: { not: null } }, _count: true }),
+    db.visit.count({ where: { gameId, day: { gte: since30 } } }),
+  ]);
+  const perDay = Array.from({ length: 14 }, (_, i) => {
+    const day = new Date(since14.getTime() + i * 864e5).toISOString().slice(0, 10);
+    return { day, n: recent.filter((r) => r.completedAt?.toISOString().slice(0, 10) === day).length };
+  });
+  const byStar: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  for (const s of stars) if (s.rating) byStar[s.rating] = s._count;
+  return {
+    players: done._count,
+    avgMinutes: done._avg.playedSeconds ? Math.round(done._avg.playedSeconds / 60) : 0,
+    started,
+    visits30,
+    perDay,
+    maxDay: Math.max(...perDay.map((d) => d.n)),
+    byStar,
+    ratingTotal: Object.values(byStar).reduce((a, b) => a + b, 0),
+  };
 }

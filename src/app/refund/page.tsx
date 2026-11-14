@@ -7,10 +7,17 @@ export const metadata: Metadata = { title: "Refund Policy" };
 export default function Refund() {
   const op = operator();
   return (
-    <LegalPage title="Refund Policy" updated="November 5, 2026">
-      <p>We want you to feel safe buying credits. Here is exactly when you get your money back.</p>
+    <LegalPage title="Refund Policy" updated="November 14, 2026">
+      <p>We want you to feel safe paying us. Here is exactly when you get your money back.</p>
 
-      <h2>Credit packs</h2>
+      <h2>Pro and Max plans</h2>
+      <ul>
+        <li>Plans renew every month until you cancel. You can cancel any time in Plan &amp; billing, and you keep the plan until the end of the month you paid for.</li>
+        <li>If you didn&apos;t use your plan (no spotlight days used) within <b>7 days</b> of your first payment, we refund that first month in full.</li>
+        <li>After that, months that have already started aren&apos;t refunded, but cancelling stops every future charge.</li>
+      </ul>
+
+      <h2>Credit packs (bought before November 14, 2026)</h2>
       <ul>
         <li>You can get a full refund within <b>14 days</b> of buying a pack, as long as none of its credits have been used.</li>
         <li>Once you start a campaign, the credits used for it count as used. Credits that come back from a stopped campaign count as unused again.</li>

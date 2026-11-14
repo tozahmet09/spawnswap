@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import "server-only";
 import { createHash } from "crypto";
 import { db } from "./db";
+import { planRank } from "./plans";
 import { fetchPresence, robloxProfile } from "./roblox";
 import { MAX_OPEN_TASKS, REFERRAL_CREDITS, REFERRAL_MAX_PAID, REFERRAL_MIN_ROBLOX_AGE_DAYS, REQUIRED_SECONDS, SCRIPT_ALIVE_MS, TASK_TTL_HOURS, today } from "./money";
 
@@ -48,7 +49,7 @@ export async function playQueue(playerId: string) {
         tasks: { none: { playerId, status: { not: "EXPIRED" } } },
       },
     },
-    include: { game: true, _count: { select: { tasks: { where: { status: { in: ["PENDING", "PLAYED"] } } } } } },
+    include: { game: { include: { owner: { select: { plan: true, planUntil: true } } } }, _count: { select: { tasks: { where: { status: { in: ["PENDING", "PLAYED"] } } } } } },
     orderBy: { createdAt: "asc" },
   });
   const seen = new Set<string>();
@@ -60,8 +61,8 @@ export async function playQueue(playerId: string) {
       seen.add(c.gameId);
       return true;
     })
-    // Games with the tracker script (Verified) are shown first, as a reward for installing it.
-    .sort((a, b) => Number(isVerifiedGame(b.game)) - Number(isVerifiedGame(a.game)));
+    // Pro and Max games first (their plan perk), then games with the tracker script (Verified), as a reward for installing it.
+    .sort((a, b) => planRank(b.game.owner) - planRank(a.game.owner) || Number(isVerifiedGame(b.game)) - Number(isVerifiedGame(a.game)));
 }
 
 export async function startTask(playerId: string, gameId: string) {

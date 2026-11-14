@@ -8,10 +8,14 @@ import { Rail } from "@/components/Rail";
 import { ImmersiveHero, TrailerCard, type TrailerGame } from "@/components/TrailerCard";
 import { displayName, gameThumbnails } from "@/lib/thumbs";
 import { releaseLabel } from "@/lib/release";
+import { planBadge, planOf, planRank } from "@/lib/plans";
+import { gameRatings } from "@/lib/ratings";
 
 export const dynamic = "force-dynamic";
 
-type Row = { id: string; name: string; description: string; universeId: string | null; genre: string; playing: number; iconUrl: string | null; trailerUrl: string | null; scriptLastSeen: Date | null; seriesTestedAt?: Date | null };
+type Row = { id: string; name: string; description: string; universeId: string | null; genre: string; playing: number; iconUrl: string | null; trailerUrl: string | null; scriptLastSeen: Date | null; seriesTestedAt?: Date | null; owner?: { plan: string; planUntil: Date | null } };
+// Owner's plan rides along so paid plans can get their badge and their place in the rows.
+const withOwner = { owner: { select: { plan: true, planUntil: true } } } as const;
 // Pick fields one by one: this goes to the browser, so the game's tracker secret must never be in it.
 const toCard = (g: Row): TrailerGame => ({
   id: g.id,
@@ -23,6 +27,7 @@ const toCard = (g: Row): TrailerGame => ({
   trailer: parseTrailer(g.trailerUrl),
   verified: isVerifiedGame(g),
   tested: !!g.seriesTestedAt,
+  tier: planBadge(g.owner),
 });
 
 /** First sentence or two of the description, short enough for the hero. */
@@ -42,17 +47,18 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
   // Games that give THIS player a credit: logged in, the ones they haven't played yet (not their own); logged out, every game with free slots.
   const earning = user ? new Set((await playQueue(user.id)).map((c) => c.gameId)) : await earningGameIds();
   const earn = (
-    await db.game.findMany({ where: { id: { in: [...earning] }, hiddenAt: null }, orderBy: { createdAt: "desc" }, take: 24 })
+    await db.game.findMany({ where: { id: { in: [...earning] }, hiddenAt: null }, orderBy: { createdAt: "desc" }, take: 24, include: withOwner })
   )
+    // Pro and Max games first (their perk), then games with the tracker script.
+    .sort((a, b) => planRank(b.owner) - planRank(a.owner) || Number(isVerifiedGame(b)) - Number(isVerifiedGame(a)))
     .map(toCard)
-    .map((g) => ({ ...g, earns: true }))
-    .sort((a, b) => Number(!!b.verified) - Number(!!a.verified));
-  const featuredRows = await db.game.findMany({ where: { featuredUntil: { gt: now }, hiddenAt: null }, take: 12 });
+    .map((g) => ({ ...g, earns: true }));
+  const featuredRows = await db.game.findMany({ where: { featuredUntil: { gt: now }, hiddenAt: null }, take: 12, include: withOwner });
   const featured = featuredRows.map(toCard);
   featured.sort(() => Math.random() - 0.5); // a different featured game leads the hero on each visit
 
   // Not out yet: soonest release first. They join "All games" on their day.
-  const soon = (await db.game.findMany({ where: { releaseAt: { gt: now }, hiddenAt: null }, orderBy: { releaseAt: "asc" }, take: 24 })).map((g) => ({
+  const soon = (await db.game.findMany({ where: { releaseAt: { gt: now }, hiddenAt: null }, orderBy: { releaseAt: "asc" }, take: 24, include: withOwner })).map((g) => ({
     ...toCard(g),
     release: releaseLabel(g.releaseAt!, now),
   }));
@@ -63,17 +69,24 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
       where: { hiddenAt: null, OR: [{ releaseAt: null }, { releaseAt: { lte: now } }] },
       orderBy: { createdAt: "desc" },
       take: 40,
+      include: withOwner,
     })
   )
-    .map(toCard)
-    .sort((a, b) => Number(!!b.trailer) - Number(!!a.trailer));
+    // Max games sit at the top of All games (their perk), then games with a trailer.
+    .sort((a, b) => Number(planOf(b.owner).topOfAll) - Number(planOf(a.owner).topOfAll) || Number(!!b.trailerUrl) - Number(!!a.trailerUrl))
+    .map(toCard);
 
   // Wide Roblox screenshots for every card on the page (one cached call).
   const all = [...featured, ...earn, ...fresh, ...soon];
   const universe = new Map<string, string | null>();
   for (const r of [...featuredRows, ...(await db.game.findMany({ where: { id: { in: all.map((g) => g.id) } }, select: { id: true, universeId: true } }))]) universe.set(r.id, r.universeId);
   const thumbs = await gameThumbnails([...universe.values()]);
-  for (const g of all) g.thumb = thumbs.get(universe.get(g.id) ?? "") ?? null;
+  // Star rating and number of ratings replace the Roblox player count, which isn't accurate for small games.
+  const ratings = await gameRatings([...universe.keys()]);
+  for (const g of all) {
+    g.thumb = thumbs.get(universe.get(g.id) ?? "") ?? null;
+    g.rating = ratings.get(g.id) ?? null;
+  }
 
   // Hero: paid featured games first, then games that give credits, then the newest. Up to 5, each with a picture.
   const heroIds = new Set<string>();

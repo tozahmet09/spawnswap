@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { displayName } from "@/lib/thumbs";
 import { adminSetSeries } from "@/app/actions";
+import { planOf } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Video series", robots: { index: false } };
@@ -14,8 +15,10 @@ export default async function SeriesAdmin() {
     where: { hiddenAt: null },
     orderBy: [{ seriesTestedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
     take: 200,
-    select: { id: true, name: true, seriesTestedAt: true, seriesVideoUrl: true, owner: { select: { displayName: true } } },
+    select: { id: true, name: true, seriesTestedAt: true, seriesVideoUrl: true, owner: { select: { displayName: true, plan: true, planUntil: true } } },
   });
+  // Max members are first in line for the series (their plan perk): untested Max games go to the top.
+  games.sort((a, b) => Number(!a.seriesTestedAt && planOf(a.owner).seriesPriority ? 0 : 1) - Number(!b.seriesTestedAt && planOf(b.owner).seriesPriority ? 0 : 1));
   const tested = games.filter((g) => g.seriesTestedAt).length;
 
   return (
@@ -34,6 +37,7 @@ export default async function SeriesAdmin() {
               <Link href={`/games/${g.id}`} className="font-semibold hover:underline">{displayName(g.name)}</Link>
               <span className="text-mute"> by {g.owner.displayName}</span>
               {g.seriesTestedAt && <span className="ml-2 text-lime">Tested</span>}
+              {!g.seriesTestedAt && planOf(g.owner).seriesPriority && <span className="ml-2 text-lime">Max · priority</span>}
             </div>
             <form action={adminSetSeries} className="flex flex-1 basis-80 flex-wrap items-center gap-2">
               <input type="hidden" name="gameId" value={g.id} />

@@ -42,9 +42,17 @@ Local testing with the Stripe CLI: `stripe listen --forward-to localhost:3000/ap
 - Terms page already says 13+; payments should be made by an adult or with a parent's permission, since card holders must be adults.
 - Check if you need to collect sales tax/VAT: Stripe Tax can be turned on later with `automatic_tax: { enabled: true }`.
 
-## Later: Pro subscription
+## Memberships: Free / Pro / Max (since 2026-11-14)
 
-- Create a Product + recurring Price in the Dashboard, store the price id in an env var.
-- Checkout in `subscription` mode, save the Stripe Customer id on `User`.
-- Handle `customer.subscription.created/updated/deleted` and `invoice.paid` / `invoice.payment_failed` in the same webhook.
-- Use the Customer Portal so users can cancel or change card themselves.
+Monthly subscriptions. Plans live in `src/lib/plans.ts`, Stripe code in `src/lib/subscriptions.ts` and `src/app/api/subscribe/route.ts`, the page is `/pricing`.
+
+- Paid plans sell visibility and tools only (spotlight days, placement, badge, stats, game limit). Credits are still only earned by playing. Credit packs are hidden (`CREDIT_PACKS_ON = false`).
+- Products and Prices are created automatically on first checkout, found by lookup key `spawnswap_pro_monthly` / `spawnswap_max_monthly`. Changing a price in `plans.ts` creates a new Price; existing subscribers keep the old one.
+- `syncSubscription` re-reads the subscription from Stripe on every event and copies plan, period end, status and cancel flag onto `User`. A new billing period refills `spotlightDaysLeft`. A plan only counts while `planUntil` (+3 days grace) is in the future.
+- Cancel / resume run from Plan & billing (`cancel_at_period_end`). "Card & invoices" opens the Stripe Customer Portal.
+
+### One-time setup in the Stripe Dashboard (live mode)
+
+1. *Developers → Webhooks →* the spawnswap.com endpoint *→ Add events*: `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`.
+2. *Developers → API keys →* the restricted key used in Vercel: also allow **Products: Write**, **Prices: Write**, **Subscriptions: Write**, **Customers: Write**, **Customer portal: Write**, **Invoices: Read**.
+3. *Settings → Billing → Customer portal*: click **Save** once (default settings are fine) so "Card & invoices" works.

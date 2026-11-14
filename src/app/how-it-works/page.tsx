@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CREDIT_PACKS, EARLY_BIRD_ACCOUNTS, EARLY_BIRD_CREDITS, FEATURED_OPTIONS, MAX_OPEN_TASKS, REFERRAL_CREDITS, REQUIRED_SECONDS, TASK_TTL_HOURS, fmt } from "@/lib/money";
+import { PLANS } from "@/lib/plans";
+import { EARLY_BIRD_ACCOUNTS, EARLY_BIRD_CREDITS, FEATURED_OPTIONS, MAX_OPEN_TASKS, REFERRAL_CREDITS, REQUIRED_SECONDS, TASK_TTL_HOURS, fmt } from "@/lib/money";
 
 export const metadata: Metadata = {
   title: "How it works",
@@ -81,7 +82,7 @@ export default function HowItWorks() {
             Each one plays {minutes} minutes and earns 1 credit. Alex gets 3 real players, and most of them leave a star rating.
           </Step>
           <Step n={5} title="Alex wants more players">
-            Play more games to earn more credits for free, or buy a pack to skip the playing.
+            Play more games to earn more credits. It&apos;s always free.
           </Step>
         </ol>
       </section>
@@ -104,16 +105,12 @@ export default function HowItWorks() {
       </section>
 
       <section>
-        <h2 className="text-xl font-bold">Buying credits</h2>
-        <p className="mt-2 text-sm text-mute">Optional. Earning by playing is always free.</p>
-        <ul className="mt-4 divide-y divide-line border-y border-line text-sm">
-          {CREDIT_PACKS.map((p) => (
-            <li key={p.id} className="flex items-center justify-between py-2.5">
-              <span>{p.credits} credits <span className="text-mute">= {p.credits} players</span></span>
-              <span className="font-semibold tabular-nums">{fmt(p.cents)}</span>
-            </li>
-          ))}
-        </ul>
+        <h2 className="text-xl font-bold">Free, Pro and Max</h2>
+        <p className="mt-2 text-sm text-mute">
+          Spawnswap is free. Pro ({fmt(PLANS.PRO.cents)}/month) and Max ({fmt(PLANS.MAX.cents)}/month) don&apos;t sell players: they put your game first in
+          Play &amp; earn, add free spotlight days every month, detailed stats and room for more games.{" "}
+          <Link href="/pricing" className="text-lime underline-offset-4 hover:underline">See plans</Link>
+        </p>
         <h3 className="mt-8 font-semibold">Spotlight on the homepage</h3>
         <p className="mt-1 text-sm text-mute">
           Put your trailer at the top of the homepage: {FEATURED_OPTIONS.map((o) => `${fmt(o.cents)} for ${o.days} day${o.days > 1 ? "s" : ""}`).join(", ")}.
@@ -141,7 +138,7 @@ export default function HowItWorks() {
             Yes. Share your invite link: your friend starts with {REFERRAL_CREDITS} credits, and you get {REFERRAL_CREDITS} once they finish their first game.
           </Qa>
           <Qa q="Can I pay with Robux?">
-            No. Credits are earned by playing or bought with a card.
+            No. Credits are only earned by playing. Plans are paid by card.
           </Qa>
           <Qa q="Is this made by Roblox?">
             No. Spawnswap is independent and not affiliated with Roblox Corporation.

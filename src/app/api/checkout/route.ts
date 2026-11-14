@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getUser } from "@/lib/auth";
 import { CREDIT_PACKS, FEATURED_OPTIONS } from "@/lib/money";
 import { markPaid, paymentsMode, stripe } from "@/lib/payments";
+import { CREDIT_PACKS_ON } from "@/lib/plans";
 
 // Form fields: kind=CREDITS&pack=<id>  or  kind=FEATURED&gameId=<id>&days=<n>
 export async function POST(req: NextRequest) {
@@ -14,6 +15,8 @@ export async function POST(req: NextRequest) {
 
   let item: { amountCents: number; credits?: number; gameId?: string; days?: number; name: string; back: string };
   if (kind === "CREDITS") {
+    // Packs are paused until there are enough players to deliver them (credits are earned by playing).
+    if (!CREDIT_PACKS_ON) return NextResponse.redirect(new URL("/pricing", req.url), 303);
     const pack = CREDIT_PACKS.find((p) => p.id === f.get("pack"));
     if (!pack) return NextResponse.json({ error: "bad pack" }, { status: 400 });
     item = { amountCents: pack.cents, credits: pack.credits, name: `${pack.credits} player credits`, back: "/dashboard/billing" };
