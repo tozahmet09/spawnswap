@@ -13,7 +13,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { Form } from "@/components/Form";
 import { TrailerUpload } from "@/components/TrailerUpload";
 import { DeleteGameButton } from "@/components/DeleteGameButton";
-import { cancelCampaign, createCampaign, refreshGame, setGameHidden, setReleaseDate, spendSpotlightDays, toggleCampaign } from "@/app/actions";
+import { cancelCampaign, createCampaign, refreshGame, setGameHidden, setReleaseDate, setWantsVideo, spendSpotlightDays, toggleCampaign } from "@/app/actions";
 import { planOf } from "@/lib/plans";
 import { isUpcoming, releaseLabel } from "@/lib/release";
 
@@ -227,6 +227,27 @@ export default async function GamePage({
               </button>
             ))}
           </form>
+        </Step>
+
+        <Step n={6} title="Want a video?" done={!!game.wantsVideoAt || !!game.seriesTestedAt} optional>
+          {game.seriesTestedAt ? (
+            <p className="max-w-prose text-sm text-mute">
+              Your game was played in our TikTok series. It has the <span className="text-cream">Tested in our series</span> badge.
+              {game.seriesVideoUrl && <> <a href={game.seriesVideoUrl} target="_blank" rel="noopener" className="text-lime underline-offset-4 hover:underline">Watch episode</a></>}
+            </p>
+          ) : (
+            <>
+              <p className="max-w-prose text-sm text-mute">
+                We play games from SpawnSwap in our TikTok series, for free. Games that ask for a video get picked first. We can&apos;t promise every game gets one.
+              </p>
+              {game.wantsVideoAt && <p className="text-sm text-cream">You asked for a video. We&apos;ll add the badge to your game if it&apos;s in an episode.</p>}
+              <form action={setWantsVideo}>
+                <input type="hidden" name="gameId" value={game.id} />
+                <input type="hidden" name="on" value={game.wantsVideoAt ? "0" : "1"} />
+                <button className={game.wantsVideoAt ? "btn-quiet text-mute" : "btn-quiet"}>{game.wantsVideoAt ? "Cancel request" : "Yes, I want a video"}</button>
+              </form>
+            </>
+          )}
         </Step>
       </ol>
 
