@@ -15,11 +15,13 @@ export default async function SeriesAdmin() {
     where: { hiddenAt: null },
     orderBy: [{ seriesTestedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
     take: 200,
-    select: { id: true, name: true, seriesTestedAt: true, seriesVideoUrl: true, owner: { select: { displayName: true, plan: true, planUntil: true } } },
+    select: { id: true, name: true, seriesTestedAt: true, seriesVideoUrl: true, wantsVideoAt: true, owner: { select: { displayName: true, plan: true, planUntil: true } } },
   });
-  // Max members are first in line for the series (their plan perk): untested Max games go to the top.
-  games.sort((a, b) => Number(!a.seriesTestedAt && planOf(a.owner).seriesPriority ? 0 : 1) - Number(!b.seriesTestedAt && planOf(b.owner).seriesPriority ? 0 : 1));
+  // Untested games go to the top in this order: Max members (their plan perk), then devs who asked for a video, then the rest.
+  const rank = (g: (typeof games)[number]) => (g.seriesTestedAt ? 3 : planOf(g.owner).seriesPriority ? 0 : g.wantsVideoAt ? 1 : 2);
+  games.sort((a, b) => rank(a) - rank(b));
   const tested = games.filter((g) => g.seriesTestedAt).length;
+  const asked = games.filter((g) => !g.seriesTestedAt && g.wantsVideoAt).length;
 
   return (
     <div className="space-y-10">
@@ -27,7 +29,7 @@ export default async function SeriesAdmin() {
         <p className="eyebrow">Admin</p>
         <h1 className="mt-1 page-title">Video series</h1>
         <p className="mt-2 text-sm text-mute">
-          Tick the games you played in a video. They get a &ldquo;Tested in our series&rdquo; badge. Paste the episode link (TikTok or YouTube) to show a &ldquo;Watch episode&rdquo; link. {tested} of {games.length} marked.
+          Tick the games you played in a video. They get a &ldquo;Tested in our series&rdquo; badge. Paste the episode link (TikTok or YouTube) to show a &ldquo;Watch episode&rdquo; link. {tested} of {games.length} marked. {asked} {asked === 1 ? "game is" : "games are"} waiting for a video.
         </p>
       </div>
       <ul className="divide-y divide-line border-y border-line">
@@ -38,6 +40,7 @@ export default async function SeriesAdmin() {
               <span className="text-mute"> by {g.owner.displayName}</span>
               {g.seriesTestedAt && <span className="ml-2 text-lime">Tested</span>}
               {!g.seriesTestedAt && planOf(g.owner).seriesPriority && <span className="ml-2 text-lime">Max · priority</span>}
+              {!g.seriesTestedAt && g.wantsVideoAt && <span className="ml-2 text-lime">Wants a video</span>}
             </div>
             <form action={adminSetSeries} className="flex flex-1 basis-80 flex-wrap items-center gap-2">
               <input type="hidden" name="gameId" value={g.id} />

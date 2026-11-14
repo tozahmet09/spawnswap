@@ -282,6 +282,7 @@ export async function addGame(_: FormState, f: FormData): Promise<FormState> {
       playing: info.playing,
       visits: info.visits,
       genre: info.genre,
+      wantsVideoAt: f.get("wantsVideo") ? new Date() : null,
     },
   });
   redirect(`/dashboard/games/${game.id}`);
@@ -428,6 +429,17 @@ export async function setReleaseDate(_: FormState, f: FormData): Promise<FormSta
   revalidatePath(`/dashboard/games/${game.id}`);
   revalidatePath("/");
   return { ok: d ? "Saved. Your game shows under Coming soon until that day." : "Release date cleared." };
+}
+
+/** Turns the dev's "Want a video?" wish on or off. Admins see opted-in games first on /admin/series. */
+export async function setWantsVideo(f: FormData) {
+  const user = await requireUser();
+  const game = await db.game.findFirst({ where: { id: str(f, "gameId"), ownerId: user.id }, select: { id: true, wantsVideoAt: true } });
+  if (!game) return;
+  const on = str(f, "on") === "1";
+  await db.game.update({ where: { id: game.id }, data: { wantsVideoAt: on ? (game.wantsVideoAt ?? new Date()) : null } });
+  revalidatePath(`/dashboard/games/${game.id}`);
+  revalidatePath("/admin/series");
 }
 
 export async function setTrailer(_: FormState, f: FormData): Promise<FormState> {
