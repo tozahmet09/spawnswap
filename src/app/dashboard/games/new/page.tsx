@@ -26,6 +26,13 @@ export default async function NewGame() {
             <p>Or in Creator Dashboard, click the <span className="text-cream">⋯</span> on your game and choose <span className="text-cream">Copy URL</span>. The number alone (the place ID) works too.</p>
           </div>
         </div>
+        <label className="flex items-start gap-3 text-sm text-mute">
+          <input id="wantsVideo" name="wantsVideo" type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-[#c8f031]" />
+          <span>
+            <span className="font-semibold text-cream">Want a video?</span> Tick this if you&apos;d like us to play your game in our free &ldquo;Testing your Roblox game&rdquo; series.
+            It&apos;s free and the review is honest. We pick which games we play, so this isn&apos;t a promise of a video. You can change it later.
+          </span>
+        </label>
       </Form>
     </div>
   );
