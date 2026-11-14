@@ -26,6 +26,19 @@ model User {
   referralCode     String?
   referredById     String?
   referralPaid     Boolean    @default(false)
+  // Subscription (see src/lib/plans.ts). plan is what Stripe last told us; planUntil is the end of the paid period.
+  // The plan only counts while planUntil is in the future (plus a short grace), so a missed webhook can't give a plan forever.
+  plan                 String    @default("FREE") // FREE | PRO | MAX
+  planUntil            DateTime?
+  planStatus           String? // Stripe subscription status: active | trialing | past_due | canceled ...
+  planCancelAtPeriodEnd Boolean  @default(false)
+  // Start of the billing period the spotlight days below were given for (a new period refills them).
+  planPeriodStart      DateTime?
+  // Free homepage spotlight days that come with the plan, refilled every month, not carried over.
+  spotlightDaysLeft    Int       @default(0)
+  // Not @unique so `prisma db push` on deploy can add them without a data-loss prompt (see referralCode).
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
   sessions         Session[]
   passwordResets   PasswordReset[]
   games            Game[]
@@ -36,6 +49,8 @@ model User {
   commentLikes     CommentLike[]
 
   @@index([referralCode])
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
 }
 
 model Session {

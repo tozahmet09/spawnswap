@@ -51,7 +51,10 @@ export default function Terms() {
       <h2>Purchases</h2>
       <ul>
         <li>Prices are shown in US dollars before you pay. Payments are processed by {op.payments}.</li>
-        <li>Unused credit packs can be refunded within 14 days of purchase if none of the credits have been used. See the <Link href="/refund">refund policy</Link> for the details.</li>
+        <li>Pro and Max are monthly subscriptions. They renew automatically each month at the price shown until you cancel. You can cancel any time in Plan &amp; billing; the plan stays until the end of the paid month, then your account goes back to Free. Your games and credits stay.</li>
+        <li>Paid plans give visibility and tools (spotlight days, placement, badges, stats). They don&apos;t include players or credits: every player comes from credits earned by playing. Spotlight days refill monthly and don&apos;t carry over.</li>
+        <li>We may change plan prices with at least 14 days&apos; notice by email before your next renewal.</li>
+        <li>Credit packs bought in the past: unused packs can be refunded within 14 days of purchase if none of the credits have been used. See the <Link href="/refund">refund policy</Link> for the details.</li>
         <li>A homepage spotlight that has already started can&apos;t be refunded.</li>
       </ul>
 

@@ -18,6 +18,7 @@ import { COMMENT_COOLDOWN_MS, COMMENT_MAX_CHARS, EARLY_BIRD_ACCOUNTS, EARLY_BIRD
 import { emailEnabled, sendEmail } from "@/lib/email";
 import { operator } from "@/lib/legal";
 import { daysUntil, parseReleaseDate } from "@/lib/release";
+import { PLANS, planOf } from "@/lib/plans";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -249,6 +250,12 @@ export async function addGame(_: FormState, f: FormData): Promise<FormState> {
 
   const existing = await db.game.findUnique({ where: { placeId } });
   if (existing?.ownerId === user.id) redirect(`/dashboard/games/${existing.id}`);
+  // Game limit per plan. Archived games count; delete one to make room. Games added before plans existed stay.
+  const plan = planOf(user);
+  if ((await db.game.count({ where: { ownerId: user.id } })) >= plan.maxGames) {
+    const next = plan.id === "FREE" ? PLANS.PRO : PLANS.MAX;
+    return { error: `Your ${plan.name} plan has room for ${plan.maxGames} games. Delete one, or get ${next.name} for up to ${Number.isFinite(next.maxGames) ? next.maxGames : "unlimited"} games on the Pricing page.` };
+  }
   if (existing) {
     // Someone claimed it, never installed the script and never ran a campaign: let the real owner take it after a day.
     // (The script is optional now, so a game that's actually in use is never taken away.)
@@ -294,7 +301,7 @@ export async function createCampaign(_: FormState, f: FormData): Promise<FormSta
     await tx.campaign.create({ data: { gameId: game.id, targetPlayers: n } });
     return true;
   });
-  if (!ok) return { error: `You need ${n} credits. Play other games to earn them, or buy a pack.` };
+  if (!ok) return { error: `You need ${n} credits. Play other games for 10 minutes each to earn them.` };
   redirect(`/dashboard/games/${game.id}`);
 }
 
@@ -350,6 +357,28 @@ export async function setGameHidden(f: FormData) {
  * are refunded first, then the game row goes; campaigns, play tasks, visits, likes and comments cascade,
  * payments keep their record with gameId set to null. Credits players already earned stay theirs.
  */
+/** Puts a game on the homepage spotlight using free days that come with Pro / Max. */
+export async function spendSpotlightDays(_: FormState, f: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const days = parseInt(str(f, "days"), 10);
+  const game = await db.game.findFirst({ where: { id: str(f, "gameId"), ownerId: user.id } });
+  if (!game || game.hiddenAt) return { error: "Pick one of your games." };
+  if (!game.trailerUrl) return { error: "Add a trailer first (step 1)." };
+  if (planOf(user).id === "FREE") return { error: "Spotlight days come with Pro and Max." };
+  if (!(days >= 1 && days <= 31)) return { error: "Pick how many days." };
+  const ok = await db.$transaction(async (tx) => {
+    // Take the days only if they are still there, in one step, so two clicks can't use them twice.
+    const took = await tx.user.updateMany({ where: { id: user.id, spotlightDaysLeft: { gte: days } }, data: { spotlightDaysLeft: { decrement: days } } });
+    if (!took.count) return false;
+    const start = game.featuredUntil && game.featuredUntil > new Date() ? game.featuredUntil : new Date();
+    await tx.game.update({ where: { id: game.id }, data: { featuredUntil: new Date(start.getTime() + days * 864e5) } });
+    return true;
+  });
+  if (!ok) return { error: "You don't have that many spotlight days left this month." };
+  revalidatePath(`/dashboard/games/${game.id}`);
+  return { ok: `Spotlight on for ${days} day${days > 1 ? "s" : ""}.` };
+}
+
 export async function deleteGame(f: FormData) {
   const user = await requireUser();
   const game = await db.game.findFirst({ where: { id: str(f, "gameId"), ownerId: user.id }, select: { id: true } });

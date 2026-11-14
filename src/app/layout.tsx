@@ -54,7 +54,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                     </summary>
                     <div className="absolute right-0 mt-2 w-48 overflow-hidden rounded-ctl border border-line bg-panel py-1 text-sm shadow-[0_12px_32px_rgba(0,0,0,.45)]">
                       <Link href="/dashboard" className="block px-4 py-2.5 hover:bg-line">My Games</Link>
-                      <Link href="/dashboard/billing" className="block px-4 py-2.5 hover:bg-line">Credits</Link>
+                      <Link href="/dashboard/billing" className="block px-4 py-2.5 hover:bg-line">Plan &amp; billing</Link>
                       <Link href="/dashboard/account" className="block px-4 py-2.5 hover:bg-line">Account</Link>
                       <form action="/api/logout" method="post" className="border-t border-line">
                         <button className="block w-full px-4 py-2.5 text-left text-mute hover:bg-line hover:text-cream">Log Out</button>
@@ -77,6 +77,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <span>© {new Date().getFullYear()} Spawnswap. Not affiliated with Roblox Corporation.</span>
             <span className="hidden h-3 w-px bg-line sm:block" aria-hidden />
             <Link href="/how-it-works" className="transition hover:text-cream">How It Works</Link>
+            <Link href="/pricing" className="transition hover:text-cream">Pricing</Link>
             <Link href="/guides" className="transition hover:text-cream">Guides</Link>
             <Link href="/terms" className="transition hover:text-cream">Terms</Link>
             <Link href="/privacy" className="transition hover:text-cream">Privacy</Link>

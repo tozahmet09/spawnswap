@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BadgeCheck, Clapperboard, Play, Ticket, Users } from "lucide-react";
+import { BadgeCheck, Clapperboard, Play, Star, Ticket } from "lucide-react";
 import { playGame } from "@/app/actions";
 import type { Trailer } from "@/lib/trailer";
 import { GameIcon } from "./GameIcon";
@@ -26,6 +26,10 @@ export type TrailerGame = {
   verified?: boolean;
   /** Played in the "testing games on SpawnSwap" video series. */
   tested?: boolean;
+  /** Average star rating from verified players and how many rated. Shown instead of the Roblox player count (which isn't accurate for small games). */
+  rating?: { avg: number; count: number } | null;
+  /** Owner's paid plan, shown as a small badge. */
+  tier?: "PRO" | "MAX";
   /** Shown as a rank badge on leaderboard rows of cards. */
   rank?: number;
   /** The owner still has player slots, so playing it earns a credit. */
@@ -150,6 +154,16 @@ export function Media({ game, active, priority }: { game: TrailerGame; active: b
   );
 }
 
+/** "★ 4.5 (12)": average stars and number of ratings. "New" when nobody rated yet. */
+export function Stars({ rating }: { rating?: TrailerGame["rating"] }) {
+  if (!rating?.count) return <span className="font-body">New</span>;
+  return (
+    <span className="inline-flex items-center gap-1 tabular-nums" aria-label={`${rating.avg.toFixed(1)} stars from ${rating.count} rating${rating.count > 1 ? "s" : ""}`}>
+      <Star className="h-3 w-3 fill-lime text-lime" aria-hidden /> <span className="text-cream">{rating.avg.toFixed(1)}</span> ({rating.count})
+    </span>
+  );
+}
+
 function Meta({ game }: { game: TrailerGame }) {
   return (
     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 font-mono text-xs text-faint">
@@ -158,14 +172,18 @@ function Meta({ game }: { game: TrailerGame }) {
       {game.release ? (
         <span className="tabular-nums text-cream">{game.release}</span>
       ) : (
-        <span className="inline-flex items-center gap-1 tabular-nums">
-          <Users className="h-3 w-3" /> {game.playing.toLocaleString()}
-        </span>
+        <Stars rating={game.rating} />
       )}
       {game.verified && (
         <span className="inline-flex items-center text-mute" title="Verified: in-game tracker installed">
           <BadgeCheck className="h-3.5 w-3.5" aria-label="Verified" />
         </span>
+      )}
+      {game.tier && (
+        <>
+          <span aria-hidden>·</span>
+          <span className="font-body font-semibold text-lime" title={`${game.tier === "MAX" ? "Max" : "Pro"} developer`}>{game.tier === "MAX" ? "Max" : "Pro"}</span>
+        </>
       )}
       {game.tested && (
         <>
@@ -279,8 +297,8 @@ export function ImmersiveHero({ games }: { games: TrailerGame[] }) {
         <div className="relative mx-auto flex h-full max-w-6xl flex-col justify-end px-4 pb-10 sm:pb-14 lg:pb-16">
           <div key={`t-${g.id}`} className="max-w-xl animate-rise-in">
             <p className="flex items-center gap-2 font-mono text-xs uppercase tracking-[.06em] text-cream/80">
-              <span className={`h-1.5 w-1.5 rounded-full ${g.playing > 0 ? "bg-verified" : "bg-lime"}`} aria-hidden />
-              {g.playing > 0 ? `${g.playing.toLocaleString()} playing now` : "New on Spawnswap"}
+              <span className="h-1.5 w-1.5 rounded-full bg-lime" aria-hidden />
+              {g.rating?.count ? `★ ${g.rating.avg.toFixed(1)} (${g.rating.count} rating${g.rating.count > 1 ? "s" : ""})` : "New on Spawnswap"}
               {g.genre && g.genre !== "All" && <> · {g.genre}</>}
             </p>
             <h1 className="mt-3 text-[36px] font-semibold leading-[1] tracking-[-0.04em] sm:text-[48px]">
