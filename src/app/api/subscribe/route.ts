@@ -15,6 +15,16 @@ export const runtime = "nodejs";
  *   action=portal               Stripe's billing page (card, invoices)
  */
 export async function POST(req: NextRequest) {
+  try {
+    return await handle(req);
+  } catch (e) {
+    // Usually a Stripe key without the subscription permissions (see docs/STRIPE.md). Show a calm message, not a crash.
+    console.error("subscribe", e);
+    return NextResponse.redirect(new URL("/dashboard/billing?payments=off", req.url), 303);
+  }
+}
+
+async function handle(req: NextRequest) {
   const user = await getUser();
   if (!user) return NextResponse.redirect(new URL("/signup", req.url), 303);
   const f = await req.formData();
