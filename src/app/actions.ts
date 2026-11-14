@@ -282,6 +282,7 @@ export async function addGame(_: FormState, f: FormData): Promise<FormState> {
       playing: info.playing,
       visits: info.visits,
       genre: info.genre,
+      wantsVideoAt: f.get("wantsVideo") === "on" ? new Date() : null,
     },
   });
   redirect(`/dashboard/games/${game.id}`);
@@ -350,6 +351,18 @@ export async function setGameHidden(f: FormData) {
   revalidatePath("/dashboard");
   revalidatePath(`/dashboard/games/${game.id}`);
   redirect(`/dashboard/games/${game.id}?visibility=${hide ? "hidden" : "shown"}#visibility`);
+}
+
+/** The dev turns "Want a video?" on or off for their game. Free, and only a wish: it never promises a video. */
+export async function setWantsVideo(f: FormData) {
+  const user = await requireUser();
+  const want = str(f, "want") === "1";
+  const game = await db.game.findFirst({ where: { id: str(f, "gameId"), ownerId: user.id }, select: { id: true, wantsVideoAt: true } });
+  if (!game) return;
+  await db.game.update({ where: { id: game.id }, data: { wantsVideoAt: want ? (game.wantsVideoAt ?? new Date()) : null } });
+  revalidatePath(`/dashboard/games/${game.id}`);
+  revalidatePath("/admin/series");
+  redirect(`/dashboard/games/${game.id}?video=${want ? "on" : "off"}#video`);
 }
 
 /**

@@ -13,7 +13,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { Form } from "@/components/Form";
 import { TrailerUpload } from "@/components/TrailerUpload";
 import { DeleteGameButton } from "@/components/DeleteGameButton";
-import { cancelCampaign, createCampaign, refreshGame, setGameHidden, setReleaseDate, spendSpotlightDays, toggleCampaign } from "@/app/actions";
+import { cancelCampaign, createCampaign, refreshGame, setGameHidden, setReleaseDate, setWantsVideo, spendSpotlightDays, toggleCampaign } from "@/app/actions";
 import { planOf } from "@/lib/plans";
 import { isUpcoming, releaseLabel } from "@/lib/release";
 
@@ -38,7 +38,7 @@ export default async function GamePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ paid?: string; needTrailer?: string; session_id?: string; payments?: string; visibility?: string }>;
+  searchParams: Promise<{ paid?: string; needTrailer?: string; session_id?: string; payments?: string; visibility?: string; video?: string }>;
 }) {
   const user = await requireUser();
   const { id } = await params;
@@ -302,6 +302,29 @@ export default async function GamePage({
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      <section id="video" className="scroll-mt-24 space-y-3 border-t border-line pt-8">
+        <h2 className="text-xl font-bold">Want a video?</h2>
+        {q.video === "on" && <p className="text-sm text-verified">Got it. We&apos;ll keep your game in mind for the series.</p>}
+        {q.video === "off" && <p className="text-sm text-verified">Turned off.</p>}
+        {game.seriesTestedAt ? (
+          <p className="max-w-prose text-sm text-mute">Your game was already played in our &ldquo;Testing your Roblox game&rdquo; series.</p>
+        ) : (
+          <>
+            <p className="max-w-prose text-sm text-mute">
+              {game.wantsVideoAt
+                ? "You asked for your game to be played in our free \u201cTesting your Roblox game\u201d series. "
+                : "Let us know you'd like your game played in our free \u201cTesting your Roblox game\u201d series. "}
+              It&apos;s free and the review is honest. We pick which games we play, so this isn&apos;t a promise of a video.
+            </p>
+            <form action={setWantsVideo}>
+              <input type="hidden" name="gameId" value={game.id} />
+              <input type="hidden" name="want" value={game.wantsVideoAt ? "0" : "1"} />
+              <button className={game.wantsVideoAt ? "btn-quiet" : "btn"}>{game.wantsVideoAt ? "I don't want a video" : "Yes, I want a video"}</button>
+            </form>
+          </>
         )}
       </section>
 

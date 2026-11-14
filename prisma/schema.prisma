@@ -107,6 +107,9 @@ model Game {
   seriesTestedAt DateTime?
   // Optional link to that episode (TikTok / YouTube). Shown as "Watch episode" on the game page.
   seriesVideoUrl String?
+  // Set when the dev ticks "Want a video?": they'd like their game played in the free testing series.
+  // Only a wish, not a promise or a paid perk: ahmet picks which games he plays. null = didn't ask.
+  wantsVideoAt   DateTime?
   likeCount      Int        @default(0)
   createdAt      DateTime   @default(now())
   owner          User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)

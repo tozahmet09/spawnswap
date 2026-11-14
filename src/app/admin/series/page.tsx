@@ -9,17 +9,24 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Video series", robots: { index: false } };
 
 /** Mark the games played in the "testing games on SpawnSwap" videos. They get a "Tested" badge on their page and cards. */
-export default async function SeriesAdmin() {
+export default async function SeriesAdmin({ searchParams }: { searchParams: Promise<{ want?: string }> }) {
   await requireAdmin();
+  const onlyWant = (await searchParams).want === "1";
   const games = await db.game.findMany({
-    where: { hiddenAt: null },
+    where: { hiddenAt: null, ...(onlyWant ? { wantsVideoAt: { not: null }, seriesTestedAt: null } : {}) },
     orderBy: [{ seriesTestedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
     take: 200,
-    select: { id: true, name: true, seriesTestedAt: true, seriesVideoUrl: true, owner: { select: { displayName: true, plan: true, planUntil: true } } },
+    select: { id: true, name: true, seriesTestedAt: true, wantsVideoAt: true, seriesVideoUrl: true, owner: { select: { displayName: true, plan: true, planUntil: true } } },
   });
   // Max members are first in line for the series (their plan perk): untested Max games go to the top.
-  games.sort((a, b) => Number(!a.seriesTestedAt && planOf(a.owner).seriesPriority ? 0 : 1) - Number(!b.seriesTestedAt && planOf(b.owner).seriesPriority ? 0 : 1));
+  // Then untested games whose dev ticked "Want a video?", newest request first.
+  const wantRank = (g: (typeof games)[number]) => (!g.seriesTestedAt && g.wantsVideoAt ? 0 : 1);
+  games.sort((a, b) => {
+    const max = (g: (typeof games)[number]) => (!g.seriesTestedAt && planOf(g.owner).seriesPriority ? 0 : 1);
+    return max(a) - max(b) || wantRank(a) - wantRank(b) || (b.wantsVideoAt?.getTime() ?? 0) - (a.wantsVideoAt?.getTime() ?? 0);
+  });
   const tested = games.filter((g) => g.seriesTestedAt).length;
+  const wanting = await db.game.count({ where: { hiddenAt: null, wantsVideoAt: { not: null }, seriesTestedAt: null } });
 
   return (
     <div className="space-y-10">
@@ -29,6 +36,13 @@ export default async function SeriesAdmin() {
         <p className="mt-2 text-sm text-mute">
           Tick the games you played in a video. They get a &ldquo;Tested in our series&rdquo; badge. Paste the episode link (TikTok or YouTube) to show a &ldquo;Watch episode&rdquo; link. {tested} of {games.length} marked.
         </p>
+        <p className="mt-3 text-sm">
+          {onlyWant ? (
+            <Link href="/admin/series" className="text-lime underline-offset-4 hover:underline">Show all games</Link>
+          ) : (
+            <Link href="/admin/series?want=1" className="text-lime underline-offset-4 hover:underline">Only games that want a video ({wanting})</Link>
+          )}
+        </p>
       </div>
       <ul className="divide-y divide-line border-y border-line">
         {games.map((g) => (
@@ -37,6 +51,7 @@ export default async function SeriesAdmin() {
               <Link href={`/games/${g.id}`} className="font-semibold hover:underline">{displayName(g.name)}</Link>
               <span className="text-mute"> by {g.owner.displayName}</span>
               {g.seriesTestedAt && <span className="ml-2 text-lime">Tested</span>}
+              {!g.seriesTestedAt && g.wantsVideoAt && <span className="ml-2 text-cream">Wants a video · {g.wantsVideoAt.toISOString().slice(0, 10)}</span>}
               {!g.seriesTestedAt && planOf(g.owner).seriesPriority && <span className="ml-2 text-lime">Max · priority</span>}
             </div>
             <form action={adminSetSeries} className="flex flex-1 basis-80 flex-wrap items-center gap-2">
