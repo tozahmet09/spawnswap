@@ -39,6 +39,9 @@ model User {
   // Not @unique so `prisma db push` on deploy can add them without a data-loss prompt (see referralCode).
   stripeCustomerId     String?
   stripeSubscriptionId String?
+  // Friday "who played your game this week" email. On by default; the email's unsubscribe link turns it off.
+  weeklyReport         Boolean   @default(true)
+  weeklyReportSentAt   DateTime?
   sessions         Session[]
   passwordResets   PasswordReset[]
   games            Game[]
