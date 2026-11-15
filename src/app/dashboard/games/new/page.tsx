@@ -2,13 +2,13 @@ import { requireUser } from "@/lib/auth";
 import { addGame } from "@/app/actions";
 import { Form } from "@/components/Form";
 import { EARLY_BIRD_CREDITS } from "@/lib/money";
-import { welcomeSpotsLeft } from "@/lib/welcome";
+import { welcomeOpenFor } from "@/lib/welcome";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewGame() {
   const user = await requireUser();
-  const welcome = !user.welcomeBonusPaid && EARLY_BIRD_CREDITS > 0 && (await welcomeSpotsLeft()) > 0;
+  const welcome = await welcomeOpenFor(user);
   return (
     <div className="mx-auto max-w-lg space-y-6 py-6">
       <div>

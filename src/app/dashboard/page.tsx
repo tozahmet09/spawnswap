@@ -4,8 +4,8 @@ import { BadgeCheck, ChevronRight, Gift, Plus, Link2 } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/admin";
-import { EARLY_BIRD_CREDITS, REFERRAL_CREDITS, SCRIPT_ALIVE_MS } from "@/lib/money";
-import { welcomeSpotsLeft } from "@/lib/welcome";
+import { EARLY_BIRD_ACCOUNTS, EARLY_BIRD_CREDITS, REFERRAL_CREDITS, SCRIPT_ALIVE_MS } from "@/lib/money";
+import { welcomeOpenFor } from "@/lib/welcome";
 import { ensureReferralCode } from "@/lib/community";
 import { CopyButton } from "@/components/CopyButton";
 import { GameIcon } from "@/components/GameIcon";
@@ -25,7 +25,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     },
   });
   const alive = Date.now() - SCRIPT_ALIVE_MS;
-  const welcome = !user.welcomeBonusPaid && EARLY_BIRD_CREDITS > 0 && (await welcomeSpotsLeft()) > 0;
+  const welcome = await welcomeOpenFor(user);
   const code = await ensureReferralCode(user.id);
   const h = await headers();
   const appUrl = process.env.APP_URL || `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
@@ -48,7 +48,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <Link href="/dashboard/games/new" className="btn"><Plus className="h-4 w-4" /> Add game</Link>
       </div>
 
-      {welcome && (
+      {welcome && games.length > 0 && (
         <Link href="/dashboard/games/new" className="flex items-center gap-3 rounded-ctl border border-lime/40 bg-lime/10 px-4 py-3 text-sm hover:border-lime">
           <Gift className="h-4 w-4 text-lime" />
           <span className="flex-1">Add your game, get {EARLY_BIRD_CREDITS} free credits.</span>
@@ -83,7 +83,21 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </Link>
       )}
 
-      {games.length === 0 ? (
+      {games.length === 0 && welcome ? (
+        // Right after signup: the one thing to do next, and what it pays.
+        <section className="border-y border-line py-12 text-center sm:py-16">
+          <Gift className="mx-auto h-8 w-8 text-lime drop-shadow-[0_0_14px_rgba(200,240,49,.55)]" aria-hidden />
+          <h2 className="mx-auto mt-4 max-w-md font-display text-[28px] font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[34px]">
+            Add your game, get <span className="text-lime">{EARLY_BIRD_CREDITS} free credits</span>
+          </h2>
+          <p className="mx-auto mt-3 max-w-sm text-sm text-mute">
+            A welcome gift for the first {EARLY_BIRD_ACCOUNTS} developers. Each credit brings one real player who plays your game for 10+ minutes.
+            The credits arrive the moment your first game is added.
+          </p>
+          <Link href="/dashboard/games/new" className="btn mt-6"><Plus className="h-4 w-4" /> Add my game</Link>
+          <p className="mt-3 text-xs text-faint">Takes about a minute. Just paste the Roblox link.</p>
+        </section>
+      ) : games.length === 0 ? (
         <div className="py-14 text-center">
           <p className="text-mute">Paste your game&apos;s Roblox link to start.</p>
           <Link href="/dashboard/games/new" className="btn mt-4"><Plus className="h-4 w-4" /> Add game</Link>
