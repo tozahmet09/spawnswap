@@ -15,7 +15,8 @@ import { del } from "@vercel/blob";
 import { isOwnUpload, parseTrailer } from "@/lib/trailer";
 import { checkTrailer } from "@/lib/trailerCheck";
 import { requireAdmin } from "@/lib/admin";
-import { COMMENT_COOLDOWN_MS, COMMENT_MAX_CHARS, EARLY_BIRD_ACCOUNTS, EARLY_BIRD_CREDITS, REFERRAL_CREDITS } from "@/lib/money";
+import { COMMENT_COOLDOWN_MS, COMMENT_MAX_CHARS, REFERRAL_CREDITS } from "@/lib/money";
+import { payWelcomeBonus } from "@/lib/welcome";
 import { emailEnabled, sendEmail } from "@/lib/email";
 import { operator } from "@/lib/legal";
 import { daysUntil, parseReleaseDate } from "@/lib/release";
@@ -41,10 +42,10 @@ export async function signup(_: FormState, f: FormData): Promise<FormState> {
   const passwordHash = await hashPassword(password);
   const ref = str(f, "ref").toLowerCase();
   const inviter = ref ? await db.user.findFirst({ where: { referralCode: ref }, select: { id: true } }) : null;
-  const user = await db.$transaction(async (tx) => {
-    const early = (await tx.user.count()) < EARLY_BIRD_ACCOUNTS;
-    const credits = (early ? EARLY_BIRD_CREDITS : 0) + (inviter ? REFERRAL_CREDITS : 0);
-    return tx.user.create({ data: { email, displayName, passwordHash, credits, referredById: inviter?.id ?? null } });
+  // Welcome credits come later, with the first game (see addGame).
+  const credits = inviter ? REFERRAL_CREDITS : 0;
+  const user = await db.user.create({
+    data: { email, displayName, passwordHash, credits, referredById: inviter?.id ?? null, welcomeBonusPaid: false },
   });
   await createSession(user.id);
   redirect("/dashboard");
@@ -291,7 +292,8 @@ export async function addGame(_: FormState, f: FormData): Promise<FormState> {
       tiktokHandle: tiktok || null,
     },
   });
-  redirect(`/dashboard/games/${game.id}`);
+  const welcome = await payWelcomeBonus(user.id);
+  redirect(`/dashboard/games/${game.id}${welcome ? "?welcome=1" : ""}`);
 }
 
 export async function createCampaign(_: FormState, f: FormData): Promise<FormState> {
