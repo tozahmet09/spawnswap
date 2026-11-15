@@ -3,7 +3,6 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { displayName } from "@/lib/thumbs";
 import { adminSetSeries } from "@/app/actions";
-import { planOf } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Video series", robots: { index: false } };
@@ -16,15 +15,11 @@ export default async function SeriesAdmin({ searchParams }: { searchParams: Prom
     where: { hiddenAt: null, ...(onlyWant ? { wantsVideoAt: { not: null }, seriesTestedAt: null } : {}) },
     orderBy: [{ seriesTestedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
     take: 200,
-    select: { id: true, name: true, seriesTestedAt: true, wantsVideoAt: true, seriesVideoUrl: true, owner: { select: { displayName: true, plan: true, planUntil: true } } },
+    select: { id: true, name: true, seriesTestedAt: true, wantsVideoAt: true, seriesVideoUrl: true, owner: { select: { displayName: true } } },
   });
-  // Max members are first in line for the series (their plan perk): untested Max games go to the top.
-  // Then untested games whose dev ticked "Want a video?", newest request first.
+  // Untested games whose dev ticked "Want a video?" go to the top, newest request first. No plan gets priority: the series is free.
   const wantRank = (g: (typeof games)[number]) => (!g.seriesTestedAt && g.wantsVideoAt ? 0 : 1);
-  games.sort((a, b) => {
-    const max = (g: (typeof games)[number]) => (!g.seriesTestedAt && planOf(g.owner).seriesPriority ? 0 : 1);
-    return max(a) - max(b) || wantRank(a) - wantRank(b) || (b.wantsVideoAt?.getTime() ?? 0) - (a.wantsVideoAt?.getTime() ?? 0);
-  });
+  games.sort((a, b) => wantRank(a) - wantRank(b) || (b.wantsVideoAt?.getTime() ?? 0) - (a.wantsVideoAt?.getTime() ?? 0));
   const tested = games.filter((g) => g.seriesTestedAt).length;
   const wanting = await db.game.count({ where: { hiddenAt: null, wantsVideoAt: { not: null }, seriesTestedAt: null } });
 
@@ -52,7 +47,6 @@ export default async function SeriesAdmin({ searchParams }: { searchParams: Prom
               <span className="text-mute"> by {g.owner.displayName}</span>
               {g.seriesTestedAt && <span className="ml-2 text-lime">Tested</span>}
               {!g.seriesTestedAt && g.wantsVideoAt && <span className="ml-2 text-cream">Wants a video · {g.wantsVideoAt.toISOString().slice(0, 10)}</span>}
-              {!g.seriesTestedAt && planOf(g.owner).seriesPriority && <span className="ml-2 text-lime">Max · priority</span>}
             </div>
             <form action={adminSetSeries} className="flex flex-1 basis-80 flex-wrap items-center gap-2">
               <input type="hidden" name="gameId" value={g.id} />

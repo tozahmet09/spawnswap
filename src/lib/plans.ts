@@ -17,8 +17,6 @@ export type Plan = {
   topOfAll: boolean;
   /** Detailed stats on the game dashboard. */
   stats: boolean;
-  /** First in line for ahmet's "testing games on SpawnSwap" video series. */
-  seriesPriority: boolean;
   blurb: string;
   perks: string[];
   /** Stripe Price lookup key. The Price is created on first use (see src/lib/subscriptions.ts). */
@@ -35,7 +33,6 @@ export const PLANS: Record<PlanId, Plan> = {
     priority: false,
     topOfAll: false,
     stats: false,
-    seriesPriority: false,
     blurb: "Play games, earn credits, get real players.",
     perks: ["Play & earn credits", "1 credit = 1 real player", "Up to 2 games", "Ratings and feedback from players"],
   },
@@ -48,7 +45,6 @@ export const PLANS: Record<PlanId, Plan> = {
     priority: true,
     topOfAll: false,
     stats: true,
-    seriesPriority: false,
     blurb: "Get your game seen first.",
     perks: ["Everything in Free", "3 spotlight days on the homepage every month", "Shown first in Play & earn", "Pro badge on your games", "Detailed stats for every game", "Up to 10 games"],
     lookupKey: "spawnswap_pro_monthly",
@@ -62,9 +58,8 @@ export const PLANS: Record<PlanId, Plan> = {
     priority: true,
     topOfAll: true,
     stats: true,
-    seriesPriority: true,
     blurb: "The most reach for serious launches.",
-    perks: ["Everything in Pro", "7 spotlight days on the homepage every month", "Top of All games", "Max badge on your games", "Priority in our TikTok game-testing series", "Unlimited games"],
+    perks: ["Everything in Pro", "7 spotlight days on the homepage every month", "Top of All games", "Max badge on your games", "Unlimited games"],
     lookupKey: "spawnswap_max_monthly",
   },
 };
