@@ -4,7 +4,8 @@ import { BadgeCheck, ChevronRight, Gift, Plus, Link2 } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/admin";
-import { REFERRAL_CREDITS, SCRIPT_ALIVE_MS } from "@/lib/money";
+import { EARLY_BIRD_CREDITS, REFERRAL_CREDITS, SCRIPT_ALIVE_MS } from "@/lib/money";
+import { welcomeSpotsLeft } from "@/lib/welcome";
 import { ensureReferralCode } from "@/lib/community";
 import { CopyButton } from "@/components/CopyButton";
 import { GameIcon } from "@/components/GameIcon";
@@ -24,6 +25,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     },
   });
   const alive = Date.now() - SCRIPT_ALIVE_MS;
+  const welcome = !user.welcomeBonusPaid && EARLY_BIRD_CREDITS > 0 && (await welcomeSpotsLeft()) > 0;
   const code = await ensureReferralCode(user.id);
   const h = await headers();
   const appUrl = process.env.APP_URL || `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
@@ -45,6 +47,14 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </div>
         <Link href="/dashboard/games/new" className="btn"><Plus className="h-4 w-4" /> Add game</Link>
       </div>
+
+      {welcome && (
+        <Link href="/dashboard/games/new" className="flex items-center gap-3 rounded-ctl border border-lime/40 bg-lime/10 px-4 py-3 text-sm hover:border-lime">
+          <Gift className="h-4 w-4 text-lime" />
+          <span className="flex-1">Add your game, get {EARLY_BIRD_CREDITS} free credits.</span>
+          <ChevronRight className="h-4 w-4 text-mute" />
+        </Link>
+      )}
 
       {!user.robloxVerified && (
         <Link href="/dashboard/roblox" className="flex items-center gap-3 rounded-ctl border border-line px-4 py-3 text-sm hover:border-mute">

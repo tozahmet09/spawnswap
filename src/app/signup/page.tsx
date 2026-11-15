@@ -1,16 +1,19 @@
 import Link from "next/link";
 import { signup } from "../actions";
 import { Form } from "@/components/Form";
-import { REFERRAL_CREDITS } from "@/lib/money";
+import { EARLY_BIRD_CREDITS, REFERRAL_CREDITS } from "@/lib/money";
+import { welcomeSpotsLeft } from "@/lib/welcome";
 
 export default async function Signup({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
   const { ref = "" } = await searchParams;
   const code = /^[a-z0-9]{4,12}$/i.test(ref) ? ref : "";
+  const welcome = EARLY_BIRD_CREDITS > 0 && (await welcomeSpotsLeft()) > 0;
   return (
     <div className="mx-auto max-w-sm space-y-6 py-6">
       <div>
         <p className="eyebrow">Free account</p>
         <h1 className="mt-1 page-title">Get your game seen</h1>
+        {welcome && <p className="mt-2 text-sm text-mute">Add your game, get <span className="text-lime">{EARLY_BIRD_CREDITS} free credits</span>. Only for the first developers.</p>}
       </div>
       {code && <p className="rounded-ctl border border-lime/40 bg-lime/10 px-4 py-3 text-sm">A friend invited you. You start with +{REFERRAL_CREDITS} bonus credits.</p>}
       <Form action={signup} submit="Create account">
