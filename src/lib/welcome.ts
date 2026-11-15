@@ -23,3 +23,9 @@ export async function payWelcomeBonus(userId: string) {
     return r.count === 1;
   });
 }
+
+/** True when this account would still get the welcome credits for adding its first game. */
+export async function welcomeOpenFor(user: { welcomeBonusPaid: boolean } | null | undefined) {
+  if (!user || user.welcomeBonusPaid || EARLY_BIRD_CREDITS <= 0) return false;
+  return (await welcomeSpotsLeft()) > 0;
+}

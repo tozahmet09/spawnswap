@@ -30,6 +30,8 @@ model User {
   // Defaults to true so accounts made before this rule (they got the credits at signup) are never paid twice;
   // signup sets it to false for new accounts.
   welcomeBonusPaid Boolean    @default(true)
+  // When we sent the one-time "add your game, get your welcome credits" reminder email (see src/lib/addGameReminder.ts).
+  addGameReminderAt DateTime?
   // Subscription (see src/lib/plans.ts). plan is what Stripe last told us; planUntil is the end of the paid period.
   // The plan only counts while planUntil is in the future (plus a short grace), so a missed webhook can't give a plan forever.
   plan                 String    @default("FREE") // FREE | PRO | MAX

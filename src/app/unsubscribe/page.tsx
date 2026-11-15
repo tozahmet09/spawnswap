@@ -30,11 +30,11 @@ export default async function Unsubscribe({ searchParams }: { searchParams: Prom
   const on = user.weeklyReport;
   return (
     <div className="mx-auto max-w-sm space-y-4 py-6">
-      <h1 className="page-title">{on ? "Stop the Friday email?" : "Friday email is off"}</h1>
+      <h1 className="page-title">{on ? "Stop Spawnswap emails?" : "Spawnswap emails are off"}</h1>
       <p className="text-sm text-mute">
         {on
-          ? "Every Friday we email you how many people played your games from Spawnswap that week."
-          : "You won't get the weekly “who played your game” email any more. Other emails you ask for, like password resets, still arrive."}
+          ? "That's the Friday “who played your game” email and the odd reminder, like when your welcome credits are waiting."
+          : "You won't get the Friday email or reminders any more. Emails you ask for, like password resets, still arrive."}
       </p>
       <form action={setWeekly}>
         <input type="hidden" name="u" value={u} />
