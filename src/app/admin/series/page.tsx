@@ -15,7 +15,7 @@ export default async function SeriesAdmin() {
     where: { hiddenAt: null },
     orderBy: [{ seriesTestedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
     take: 200,
-    select: { id: true, name: true, seriesTestedAt: true, seriesVideoUrl: true, wantsVideoAt: true, owner: { select: { displayName: true, plan: true, planUntil: true } } },
+    select: { id: true, name: true, seriesTestedAt: true, seriesVideoUrl: true, wantsVideoAt: true, tiktokHandle: true, owner: { select: { displayName: true, plan: true, planUntil: true } } },
   });
   // Untested games go to the top in this order: Max members (their plan perk), then devs who asked for a video, then the rest.
   const rank = (g: (typeof games)[number]) => (g.seriesTestedAt ? 3 : planOf(g.owner).seriesPriority ? 0 : g.wantsVideoAt ? 1 : 2);
@@ -41,6 +41,9 @@ export default async function SeriesAdmin() {
               {g.seriesTestedAt && <span className="ml-2 text-lime">Tested</span>}
               {!g.seriesTestedAt && planOf(g.owner).seriesPriority && <span className="ml-2 text-lime">Max · priority</span>}
               {!g.seriesTestedAt && g.wantsVideoAt && <span className="ml-2 text-lime">Wants a video</span>}
+              {g.tiktokHandle && (
+                <a href={`https://www.tiktok.com/@${g.tiktokHandle}`} target="_blank" rel="noopener" className="ml-2 text-cream underline-offset-4 hover:underline">@{g.tiktokHandle}</a>
+              )}
             </div>
             <form action={adminSetSeries} className="flex flex-1 basis-80 flex-wrap items-center gap-2">
               <input type="hidden" name="gameId" value={g.id} />

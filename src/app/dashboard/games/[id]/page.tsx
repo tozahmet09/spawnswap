@@ -241,11 +241,20 @@ export default async function GamePage({
                 We play games from SpawnSwap in our TikTok series, for free. Games that ask for a video get picked first. We can&apos;t promise every game gets one.
               </p>
               {game.wantsVideoAt && <p className="text-sm text-cream">You asked for a video. We&apos;ll add the badge to your game if it&apos;s in an episode.</p>}
-              <form action={setWantsVideo}>
-                <input type="hidden" name="gameId" value={game.id} />
-                <input type="hidden" name="on" value={game.wantsVideoAt ? "0" : "1"} />
-                <button className={game.wantsVideoAt ? "btn-quiet text-mute" : "btn-quiet"}>{game.wantsVideoAt ? "Cancel request" : "Yes, I want a video"}</button>
-              </form>
+              <div className="flex flex-wrap items-start gap-3">
+                <Form action={setWantsVideo} submit={game.wantsVideoAt ? "Save" : "Yes, I want a video"} className="flex flex-wrap items-start gap-3" buttonClass="btn-quiet">
+                  <input type="hidden" name="gameId" value={game.id} />
+                  <input type="hidden" name="on" value="1" />
+                  <input name="tiktok" aria-label="Your TikTok username (optional)" maxLength={60} placeholder="TikTok @username (optional)" autoComplete="off" defaultValue={game.tiktokHandle ? `@${game.tiktokHandle}` : ""} className="input w-64" />
+                </Form>
+                {game.wantsVideoAt && (
+                  <Form action={setWantsVideo} submit="Cancel request" className="flex" buttonClass="btn-quiet text-mute">
+                    <input type="hidden" name="gameId" value={game.id} />
+                    <input type="hidden" name="on" value="0" />
+                  </Form>
+                )}
+              </div>
+              <p className="text-xs text-mute">Add your TikTok so we can tag you in the video.</p>
             </>
           )}
         </Step>
