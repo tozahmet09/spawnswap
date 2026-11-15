@@ -109,6 +109,8 @@ model Game {
   seriesVideoUrl String?
   // Set when the dev ticks "Want a video?": they'd like the game played in ahmet's series. A wish, not a promise.
   wantsVideoAt   DateTime?
+  // The dev's TikTok username (no @), so ahmet can tag them in the episode. Optional.
+  tiktokHandle   String?
   likeCount      Int        @default(0)
   createdAt      DateTime   @default(now())
   owner          User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)

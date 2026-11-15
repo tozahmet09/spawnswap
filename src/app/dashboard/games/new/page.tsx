@@ -26,12 +26,19 @@ export default async function NewGame() {
             <p>Or in Creator Dashboard, click the <span className="text-cream">⋯</span> on your game and choose <span className="text-cream">Copy URL</span>. The number alone (the place ID) works too.</p>
           </div>
         </div>
-        <label className="flex items-start gap-3 text-sm text-mute">
-          <input name="wantsVideo" type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-[#c8f031]" />
-          <span>
-            <span className="text-cream">Want a video?</span> We may play your game in our TikTok series, for free. We can&apos;t promise every game, but we pick from these first.
-          </span>
-        </label>
+        <div className="group space-y-3">
+          <label className="flex items-start gap-3 text-sm text-mute">
+            <input name="wantsVideo" type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-[#c8f031]" />
+            <span>
+              <span className="text-cream">Want a video?</span> We may play your game in our TikTok series, for free. We can&apos;t promise every game, but we pick from these first.
+            </span>
+          </label>
+          <div className="hidden pl-8 group-has-[:checked]:block">
+            <label htmlFor="tiktok" className="label">Your TikTok username <span className="font-normal text-mute">optional</span></label>
+            <input id="tiktok" name="tiktok" maxLength={60} placeholder="@yourname" autoComplete="off" className="input" />
+            <p className="mt-1.5 text-xs text-mute">So we can tag you in the video.</p>
+          </div>
+        </div>
       </Form>
     </div>
   );

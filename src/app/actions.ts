@@ -1,5 +1,6 @@
 "use server";
 
+import { parseTiktokHandle, TIKTOK_ERROR } from "@/lib/tiktok";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createHash, randomBytes } from "crypto";
@@ -248,6 +249,10 @@ export async function addGame(_: FormState, f: FormData): Promise<FormState> {
   if (!placeId) return { error: "That doesn't look like a Roblox game link. Open your game on roblox.com and copy the address, like https://www.roblox.com/games/123456789/My-Game" };
   if (!(await rateLimit(`addgame:${user.id}`, 10, 3600e3))) return { error: TOO_FAST };
 
+  const wantsVideo = !!f.get("wantsVideo");
+  const tiktok = wantsVideo ? parseTiktokHandle(str(f, "tiktok")) : "";
+  if (tiktok === null) return { error: TIKTOK_ERROR };
+
   const existing = await db.game.findUnique({ where: { placeId } });
   if (existing?.ownerId === user.id) redirect(`/dashboard/games/${existing.id}`);
   // Game limit per plan. Archived games count; delete one to make room. Games added before plans existed stay.
@@ -282,7 +287,8 @@ export async function addGame(_: FormState, f: FormData): Promise<FormState> {
       playing: info.playing,
       visits: info.visits,
       genre: info.genre,
-      wantsVideoAt: f.get("wantsVideo") ? new Date() : null,
+      wantsVideoAt: wantsVideo ? new Date() : null,
+      tiktokHandle: tiktok || null,
     },
   });
   redirect(`/dashboard/games/${game.id}`);
@@ -431,15 +437,22 @@ export async function setReleaseDate(_: FormState, f: FormData): Promise<FormSta
   return { ok: d ? "Saved. Your game shows under Coming soon until that day." : "Release date cleared." };
 }
 
-/** Turns the dev's "Want a video?" wish on or off. Admins see opted-in games first on /admin/series. */
-export async function setWantsVideo(f: FormData) {
+/** Turns the dev's "Want a video?" wish on or off, and saves their TikTok username for tagging. Admins see opted-in games first on /admin/series. */
+export async function setWantsVideo(_: FormState, f: FormData): Promise<FormState> {
   const user = await requireUser();
   const game = await db.game.findFirst({ where: { id: str(f, "gameId"), ownerId: user.id }, select: { id: true, wantsVideoAt: true } });
-  if (!game) return;
+  if (!game) return { error: "Game not found." };
   const on = str(f, "on") === "1";
-  await db.game.update({ where: { id: game.id }, data: { wantsVideoAt: on ? (game.wantsVideoAt ?? new Date()) : null } });
+  const tiktok = on ? parseTiktokHandle(str(f, "tiktok")) : "";
+  if (tiktok === null) return { error: TIKTOK_ERROR };
+  await db.game.update({
+    where: { id: game.id },
+    data: on ? { wantsVideoAt: game.wantsVideoAt ?? new Date(), tiktokHandle: tiktok || null } : { wantsVideoAt: null },
+  });
   revalidatePath(`/dashboard/games/${game.id}`);
   revalidatePath("/admin/series");
+  if (!on) return { ok: "Request cancelled." };
+  return { ok: game.wantsVideoAt ? "Saved." : "Got it. Your game is on our list." };
 }
 
 export async function setTrailer(_: FormState, f: FormData): Promise<FormState> {
