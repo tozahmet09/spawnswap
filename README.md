@@ -8,7 +8,7 @@ Real, verified players for new Roblox games, without a big ad budget.
 - **1 credit = 1 verified player.** A dev starts a campaign ("I want 50 players"), credits are reserved, and the game shows up in the *Play & earn* queue.
 - **Verification:** each game runs a small server Script (generated per game on its dashboard page) that pings `/api/track` every 60 s with the user ids in the server. Playtime only counts for players who reserved that game on Spawnswap.
 - **Paid credit packs:** $5 = 50, $10 = 120, $20 = 300 players (Stripe Checkout).
-- **Featured slot:** $3 / 1 day, $7 / 3 days, $10 / 7 days at the top of the homepage.
+- **Spotlight:** top of the homepage. Comes only with Pro (3 days/month) and Max (7 days/month); the one-time $3/$7/$10 sale is off (`FEATURED_SALES_ON` in `src/lib/plans.ts`).
 - No Robux payments.
 
 ## Run locally

@@ -94,3 +94,6 @@ export function planRank(u: Parameters<typeof planOf>[0]) {
 
 /** Credit packs are hidden until there are enough players to deliver them. Flip to true to sell them again. */
 export const CREDIT_PACKS_ON = false;
+
+/** One-time paid spotlight ($3/$7/$10) is off: spotlight now only comes with Pro / Max days. Spotlights already paid for keep running. */
+export const FEATURED_SALES_ON = false;
