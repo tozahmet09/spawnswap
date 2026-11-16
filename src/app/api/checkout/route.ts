@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { getUser } from "@/lib/auth";
 import { CREDIT_PACKS, FEATURED_OPTIONS } from "@/lib/money";
 import { markPaid, paymentsMode, stripe } from "@/lib/payments";
-import { CREDIT_PACKS_ON } from "@/lib/plans";
+import { CREDIT_PACKS_ON, FEATURED_SALES_ON } from "@/lib/plans";
 
 // Form fields: kind=CREDITS&pack=<id>  or  kind=FEATURED&gameId=<id>&days=<n>
 export async function POST(req: NextRequest) {
@@ -21,6 +21,8 @@ export async function POST(req: NextRequest) {
     if (!pack) return NextResponse.json({ error: "bad pack" }, { status: 400 });
     item = { amountCents: pack.cents, credits: pack.credits, name: `${pack.credits} player credits`, back: "/dashboard/billing" };
   } else if (kind === "FEATURED") {
+    // One-time spotlight sales are closed; spotlight comes with Pro / Max.
+    if (!FEATURED_SALES_ON) return NextResponse.redirect(new URL("/pricing", req.url), 303);
     const opt = FEATURED_OPTIONS.find((o) => o.days === Number(f.get("days")));
     const game = await db.game.findFirst({ where: { id: String(f.get("gameId")), ownerId: user.id } });
     if (!opt || !game || game.hiddenAt) return NextResponse.json({ error: "bad option" }, { status: 400 });

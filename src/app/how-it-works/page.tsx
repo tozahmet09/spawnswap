@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PLANS } from "@/lib/plans";
-import { EARLY_BIRD_ACCOUNTS, EARLY_BIRD_CREDITS, FEATURED_OPTIONS, MAX_OPEN_TASKS, REFERRAL_CREDITS, REQUIRED_SECONDS, TASK_TTL_HOURS, fmt } from "@/lib/money";
+import { EARLY_BIRD_ACCOUNTS, EARLY_BIRD_CREDITS, MAX_OPEN_TASKS, REFERRAL_CREDITS, REQUIRED_SECONDS, TASK_TTL_HOURS, fmt } from "@/lib/money";
 
 export const metadata: Metadata = {
   title: "How it works",
@@ -113,8 +113,7 @@ export default function HowItWorks() {
         </p>
         <h3 className="mt-8 font-semibold">Spotlight on the homepage</h3>
         <p className="mt-1 text-sm text-mute">
-          Put your trailer at the top of the homepage: {FEATURED_OPTIONS.map((o) => `${fmt(o.cents)} for ${o.days} day${o.days > 1 ? "s" : ""}`).join(", ")}.
-          Needs a trailer.
+          Put your trailer at the top of the homepage. Pro comes with {PLANS.PRO.spotlightDays} spotlight days a month, Max with {PLANS.MAX.spotlightDays}. Needs a trailer.
         </p>
       </section>
 

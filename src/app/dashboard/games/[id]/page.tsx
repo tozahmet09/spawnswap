@@ -14,7 +14,7 @@ import { Form } from "@/components/Form";
 import { TrailerUpload } from "@/components/TrailerUpload";
 import { DeleteGameButton } from "@/components/DeleteGameButton";
 import { cancelCampaign, createCampaign, refreshGame, setGameHidden, setReleaseDate, setWantsVideo, spendSpotlightDays, toggleCampaign } from "@/app/actions";
-import { planOf } from "@/lib/plans";
+import { FEATURED_SALES_ON, planOf } from "@/lib/plans";
 import { isUpcoming, releaseLabel } from "@/lib/release";
 
 export const dynamic = "force-dynamic";
@@ -212,13 +212,14 @@ export default async function GamePage({
                   </select>
                 </Form>
               )}
-              <p className="text-xs text-faint">Or buy extra days:</p>
+              {FEATURED_SALES_ON && <p className="text-xs text-faint">Or buy extra days:</p>}
             </div>
           ) : (
             <p className="text-sm text-mute">
               Pro and Max come with free spotlight days every month. <Link href="/pricing" className="text-lime underline-offset-4 hover:underline">See plans</Link>
             </p>
           )}
+          {FEATURED_SALES_ON && (
           <form action="/api/checkout" method="post" className="flex flex-wrap gap-3">
             <input type="hidden" name="kind" value="FEATURED" />
             <input type="hidden" name="gameId" value={game.id} />
@@ -228,6 +229,7 @@ export default async function GamePage({
               </button>
             ))}
           </form>
+          )}
         </Step>
 
         <Step n={6} title="Want a video?" done={!!game.wantsVideoAt || !!game.seriesTestedAt} optional>

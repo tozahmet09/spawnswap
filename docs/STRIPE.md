@@ -7,7 +7,7 @@ What Spawnswap sells, all one-time payments in USD:
 | Starter pack | $5 | 50 credits |
 | Boost pack | $10 | 120 credits |
 | Launch pack | $20 | 300 credits |
-| Spotlight 1 / 3 / 7 days | $3 / $7 / $10 | Homepage featured slot (game needs a trailer) |
+| Spotlight 1 / 3 / 7 days | $3 / $7 / $10 | **Not sold any more** (`FEATURED_SALES_ON=false`); spotlight comes with Pro / Max. Old purchases still run and refund normally. |
 | Pro (later) | monthly | Subscription, see "Later" below |
 
 No Robux. Prices live in `src/lib/money.ts` and are always set on the server, never taken from the browser.
