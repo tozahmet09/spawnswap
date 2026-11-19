@@ -8,7 +8,7 @@ import { Volume2, VolumeX } from "lucide-react";
  * Browsers only allow sound after the visitor clicks something, so nothing ever plays on page load.
  * Muted state is remembered in this browser.
  */
-type Name = "pop" | "ding" | "whoosh" | "tick";
+type Name = "pop" | "ding" | "whoosh" | "tick" | "complete";
 
 let ctx: AudioContext | null = null;
 const KEY = "ss-muted";
@@ -56,6 +56,13 @@ export function playSfx(name: Name) {
     tone(a, 880, 0, 0.35, "sine", 0.14);
     tone(a, 1320, 0.09, 0.45, "sine", 0.12);
     tone(a, 1760, 0.18, 0.6, "sine", 0.08);
+  }
+  if (name === "complete") {
+    // Ring closing: a quick rising sweep, then a bright four-note chord with a soft shimmer on top.
+    tone(a, 220, 0.12, 0.6, "sine", 0.05, 660);
+    tone(a, 110, 0.74, 0.5, "sine", 0.16, 70);
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(a, f, 0.74 + i * 0.07, 1.1 - i * 0.1, "triangle", 0.09));
+    [2093, 2637, 3136].forEach((f, i) => tone(a, f, 0.95 + i * 0.09, 0.5, "sine", 0.025));
   }
   if (name === "whoosh") {
     const len = Math.floor(a.sampleRate * 0.45);
