@@ -4,13 +4,14 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { playSfx } from "./Sfx";
+import { clearHolds, holdCredits, releaseCredit } from "./creditHold";
 
 /**
  * Keeps "My progress" live without a page refresh:
  * - asks /api/play/status every 10 s for the saved playtime,
  * - lets the clock run second by second in between while the player is in the game,
  * - nudges the Roblox presence check once a minute (backup for the cron),
- * - plays the completion moment the instant a game hits the playtime.
+ * - plays the +1 credit moment once the player rates or skips a finished play (see creditHold.ts).
  */
 export type Snap = {
   id: string;
@@ -48,14 +49,14 @@ function markSeen(id: string) {
 
 export function LivePlay({
   initial,
-  games,
+  unrated,
   required,
   watchPresence,
   serverNow,
   children,
 }: {
   initial: Snap[];
-  games: Info[];
+  unrated: { id: string; completedAt: number }[];
   required: number;
   watchPresence: boolean;
   serverNow: number;
@@ -69,19 +70,23 @@ export function LivePlay({
   const [party, setParty] = useState<Info | null>(null);
   const snapsRef = useRef(snaps);
   snapsRef.current = snaps;
-  const names = useRef(new Map(games.map((g) => [g.id, g])));
-  names.current = new Map(games.map((g) => [g.id, g]));
 
-  // A play that finished in the last moments before this page opened still gets its moment.
+  // Finished but not rated/skipped yet (recently): the header holds that credit until its moment.
   useEffect(() => {
-    const done = seen();
-    const fresh = initial.find((s) => s.status === "COMPLETED" && s.completedAt && serverNow - s.completedAt < 20_000 && !done.includes(s.id));
-    if (fresh) {
-      markSeen(fresh.id);
-      setParty(names.current.get(fresh.id) ?? { id: fresh.id, name: "" });
-    }
-    // only on first open
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    holdCredits(unrated.filter((u) => serverNow - u.completedAt < 3 * 3600e3).map((u) => u.id));
+  }, [unrated, serverNow]);
+  useEffect(() => () => clearHolds(), []);
+
+  // The rating form (or Skip) asks for the moment once it's sent.
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<Info>).detail;
+      if (seen().includes(d.id)) return releaseCredit(d.id);
+      markSeen(d.id);
+      setParty(d);
+    };
+    window.addEventListener("ss-celebrate", on);
+    return () => window.removeEventListener("ss-celebrate", on);
   }, []);
 
   // New server render (e.g. after router.refresh): take its numbers.
@@ -100,7 +105,6 @@ export function LivePlay({
       const data = (await r.json()) as { now: number; tasks: Snap[] };
       setOffset(data.now - Date.now());
       const before = snapsRef.current;
-      let finished: Info | null = null;
       let changed = false;
       for (const s of data.tasks) {
         const was = before.get(s.id);
@@ -109,14 +113,9 @@ export function LivePlay({
           continue;
         }
         if (was.status !== s.status) changed = true;
-        if (was.status === "PENDING" && s.status === "COMPLETED" && !seen().includes(s.id)) {
-          markSeen(s.id);
-          finished = names.current.get(s.id) ?? { id: s.id, name: "" };
-        }
       }
       setSnaps(new Map(data.tasks.map((s) => [s.id, s])));
-      if (finished) setParty(finished);
-      // Status changes (finished, expired) re-render the list from the server: rating form, credit counter.
+      // Status changes (finished, expired) re-render the list from the server, e.g. the rating form.
       if (changed) router.refresh();
     } catch {
       // offline for a moment: next poll will catch up
@@ -164,7 +163,7 @@ export function LivePlay({
   return (
     <LiveCtx.Provider value={{ snaps, offset, now }}>
       {children}
-      {party && <Celebrate key={party.id} name={party.name} minutes={Math.round(required / 60)} onDone={() => setParty(null)} />}
+      {party && <Celebrate key={party.id} id={party.id} name={party.name} minutes={Math.round(required / 60)} onDone={() => setParty(null)} />}
     </LiveCtx.Provider>
   );
 }
@@ -213,19 +212,23 @@ export function LiveProgress({ id, required, fallback }: { id: string; required:
 }
 
 /** The "you did it" moment: ring closes, light wave, sparks, +1 credit. About 3 seconds, tap to skip. */
-function Celebrate({ name, minutes, onDone }: { name: string; minutes: number; onDone: () => void }) {
+function Celebrate({ id, name, minutes, onDone }: { id: string; name: string; minutes: number; onDone: () => void }) {
   const [leaving, setLeaving] = useState(false);
   // The parent re-renders every second (timer): keep the latest onDone without restarting the moment.
   const done = useRef(onDone);
   done.current = onDone;
   useEffect(() => {
     playSfx("complete");
+    // The header credit counter ticks up right as the ring closes.
+    const give = setTimeout(() => releaseCredit(id), 850);
     const a = setTimeout(() => setLeaving(true), 2900);
     const b = setTimeout(() => done.current(), 3400);
     return () => {
+      clearTimeout(give);
       clearTimeout(a);
       clearTimeout(b);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const R = 58;
   const C = 2 * Math.PI * R;
