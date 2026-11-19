@@ -7,8 +7,7 @@ import "./globals.css";
 import { getUser } from "@/lib/auth";
 import { CreditCounter } from "@/components/CreditCounter";
 import { WelcomeBar } from "@/components/WelcomeBar";
-import { welcomeOpenFor } from "@/lib/welcome";
-import { EARLY_BIRD_CREDITS } from "@/lib/money";
+import { db } from "@/lib/db";
 import { Particles } from "@/components/Particles";
 import { SoundToggle } from "@/components/Sfx";
 import { Analytics } from "@vercel/analytics/next";
@@ -29,8 +28,8 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getUser();
-  // Signed up but no game yet: remind them on every page that their first game earns the welcome credits.
-  const welcome = await welcomeOpenFor(user);
+  // Signed up but no game yet: remind them on every page that their credits are waiting for a game.
+  const noGameYet = !!user && user.credits > 0 && (await db.game.count({ where: { ownerId: user.id } })) === 0;
   return (
     <html lang="en" className={`${body.variable} ${mono.variable} ${display.variable}`}>
       <body>
@@ -75,7 +74,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               )}
             </div>
           </nav>
-          {welcome && <WelcomeBar credits={EARLY_BIRD_CREDITS} />}
+          {user && noGameYet && <WelcomeBar credits={user.credits} />}
         </header>
         <main className="relative z-10 mx-auto max-w-6xl px-4 py-8 sm:py-12">{children}</main>
         <footer className="relative z-10 bg-navy-deep text-faint">

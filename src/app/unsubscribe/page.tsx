@@ -33,7 +33,7 @@ export default async function Unsubscribe({ searchParams }: { searchParams: Prom
       <h1 className="page-title">{on ? "Stop Spawnswap emails?" : "Spawnswap emails are off"}</h1>
       <p className="text-sm text-mute">
         {on
-          ? "That's the Friday “who played your game” email and the odd reminder, like when your welcome credits are waiting."
+          ? "That's the Friday “who played your game” email and the odd reminder, like when your credits are waiting for your game."
           : "You won't get the Friday email or reminders any more. Emails you ask for, like password resets, still arrive."}
       </p>
       <form action={setWeekly}>

@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { BadgeCheck, ChevronRight, Gift, Plus, Link2 } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/admin";
-import { EARLY_BIRD_ACCOUNTS, EARLY_BIRD_CREDITS, REFERRAL_CREDITS, SCRIPT_ALIVE_MS } from "@/lib/money";
-import { welcomeOpenFor } from "@/lib/welcome";
+import { EARLY_BIRD_CREDITS, REFERRAL_CREDITS, SCRIPT_ALIVE_MS } from "@/lib/money";
+import { payWelcomeBonus } from "@/lib/welcome";
+import { WelcomeMoment } from "@/components/WelcomeMoment";
 import { ensureReferralCode } from "@/lib/community";
 import { CopyButton } from "@/components/CopyButton";
 import { GameIcon } from "@/components/GameIcon";
@@ -13,9 +15,11 @@ import { GoalBar } from "@/components/GoalBar";
 
 export const dynamic = "force-dynamic";
 
-export default async function Dashboard({ searchParams }: { searchParams: Promise<{ reset?: string; deleted?: string }> }) {
-  const { reset, deleted } = await searchParams;
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ reset?: string; deleted?: string; welcome?: string }> }) {
+  const { reset, deleted, welcome } = await searchParams;
   const user = await requireUser();
+  // Signed up before welcome credits moved to signup and never added a game: pay now, then show the moment.
+  if (!user.welcomeBonusPaid && (await payWelcomeBonus(user.id))) redirect("/dashboard?welcome=1");
   const games = await db.game.findMany({
     where: { ownerId: user.id },
     orderBy: { createdAt: "desc" },
@@ -25,7 +29,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     },
   });
   const alive = Date.now() - SCRIPT_ALIVE_MS;
-  const welcome = await welcomeOpenFor(user);
   const code = await ensureReferralCode(user.id);
   const h = await headers();
   const appUrl = process.env.APP_URL || `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
@@ -48,13 +51,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <Link href="/dashboard/games/new" className="btn"><Plus className="h-4 w-4" /> Add game</Link>
       </div>
 
-      {welcome && games.length > 0 && (
-        <Link href="/dashboard/games/new" className="flex items-center gap-3 rounded-ctl border border-lime/40 bg-lime/10 px-4 py-3 text-sm hover:border-lime">
-          <Gift className="h-4 w-4 text-lime" />
-          <span className="flex-1">Add your game, get {EARLY_BIRD_CREDITS} free credits.</span>
-          <ChevronRight className="h-4 w-4 text-mute" />
-        </Link>
-      )}
+      {welcome && user.welcomeBonusPaid && <WelcomeMoment credits={EARLY_BIRD_CREDITS} />}
 
       {!user.robloxVerified && (
         <Link href="/dashboard/roblox" className="flex items-center gap-3 rounded-ctl border border-line px-4 py-3 text-sm hover:border-mute">
@@ -83,16 +80,15 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </Link>
       )}
 
-      {games.length === 0 && welcome ? (
-        // Right after signup: the one thing to do next, and what it pays.
+      {games.length === 0 && user.credits > 0 ? (
+        // Right after signup: the credits are in, the one thing to do next is give them a game.
         <section className="border-y border-line py-12 text-center sm:py-16">
           <Gift className="mx-auto h-8 w-8 text-lime drop-shadow-[0_0_14px_rgba(200,240,49,.55)]" aria-hidden />
           <h2 className="mx-auto mt-4 max-w-md font-display text-[28px] font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[34px]">
-            Add your game, get <span className="text-lime">{EARLY_BIRD_CREDITS} free credits</span>
+            Your <span className="text-lime">{user.credits === 1 ? "1 credit" : `${user.credits} credits`}</span> {user.credits === 1 ? "is" : "are"} ready
           </h2>
           <p className="mx-auto mt-3 max-w-sm text-sm text-mute">
-            A welcome gift for the first {EARLY_BIRD_ACCOUNTS} developers. Each credit brings one real player who plays your game for 10+ minutes.
-            The credits arrive the moment your first game is added.
+            Each credit brings one real player who plays your game for 10+ minutes. Add your game to put them to work.
           </p>
           <Link href="/dashboard/games/new" className="btn mt-6"><Plus className="h-4 w-4" /> Add my game</Link>
           <p className="mt-3 text-xs text-faint">Takes about a minute. Just paste the Roblox link.</p>

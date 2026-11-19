@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { Archive, ArchiveRestore, BadgeCheck, CheckCircle2, Circle, RefreshCw, Star, Pause, Play as PlayIcon, X } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { EARLY_BIRD_CREDITS, FEATURED_OPTIONS, SCRIPT_ALIVE_MS, fmt } from "@/lib/money";
+import { FEATURED_OPTIONS, SCRIPT_ALIVE_MS, fmt } from "@/lib/money";
 import { trackerScript } from "@/lib/script";
 import { checkoutNotice } from "@/lib/payments";
 import { GameIcon } from "@/components/GameIcon";
@@ -38,7 +38,7 @@ export default async function GamePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ paid?: string; needTrailer?: string; session_id?: string; payments?: string; visibility?: string; welcome?: string }>;
+  searchParams: Promise<{ paid?: string; needTrailer?: string; session_id?: string; payments?: string; visibility?: string}>;
 }) {
   const user = await requireUser();
   const { id } = await params;
@@ -105,7 +105,6 @@ export default async function GamePage({
           <a href="#visibility" className="text-lime underline-offset-4 hover:underline">Unarchive</a>
         </p>
       )}
-      {q.welcome && <p role="status" className="notice">Your game is in. We added {EARLY_BIRD_CREDITS} free credits to your account.</p>}
       {notice === "paid" && <p className="text-sm text-verified">Payment received.</p>}
       {notice === "processing" && <p className="text-sm text-mute">Payment is processing. The spotlight starts as soon as Stripe confirms it.</p>}
       {notice === "off" && <p className="text-sm text-mute">Spotlight purchases aren&apos;t open yet.</p>}

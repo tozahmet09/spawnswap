@@ -11,6 +11,8 @@ let held = new Set<string>();
 const released = new Set<string>();
 // Rated just now, moment still playing: keep holding even though the server says it's rated.
 const keep = new Set<string>();
+// Welcome credits paid at signup: held until the welcome moment hands them over.
+let extra = 0;
 const subs = new Set<() => void>();
 const emit = () => subs.forEach((f) => f());
 
@@ -34,13 +36,34 @@ export function clearHolds() {
   emit();
 }
 
+/** Signup welcome: hold these credits until the welcome moment counts them in. */
+let dropTimer: ReturnType<typeof setTimeout> | undefined;
+export function holdWelcome(n: number) {
+  clearTimeout(dropTimer);
+  if (extra === n) return;
+  extra = n;
+  emit();
+}
+
+export function releaseWelcome() {
+  if (!extra) return;
+  extra = 0;
+  emit();
+}
+
+/** The welcome moment went away: drop the hold, unless it comes right back (React dev remounts). */
+export function dropWelcomeSoon() {
+  clearTimeout(dropTimer);
+  dropTimer = setTimeout(releaseWelcome, 100);
+}
+
 export function useHeldCredits() {
   return useSyncExternalStore(
     (f) => {
       subs.add(f);
       return () => subs.delete(f);
     },
-    () => held.size,
+    () => held.size + extra,
     () => 0,
   );
 }

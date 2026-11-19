@@ -42,13 +42,14 @@ export async function signup(_: FormState, f: FormData): Promise<FormState> {
   const passwordHash = await hashPassword(password);
   const ref = str(f, "ref").toLowerCase();
   const inviter = ref ? await db.user.findFirst({ where: { referralCode: ref }, select: { id: true } }) : null;
-  // Welcome credits come later, with the first game (see addGame).
   const credits = inviter ? REFERRAL_CREDITS : 0;
   const user = await db.user.create({
     data: { email, displayName, passwordHash, credits, referredById: inviter?.id ?? null, welcomeBonusPaid: false },
   });
+  // Welcome credits right away; the dashboard plays the welcome moment for them.
+  const welcome = await payWelcomeBonus(user.id);
   await createSession(user.id);
-  redirect("/dashboard");
+  redirect(welcome ? "/dashboard?welcome=1" : "/dashboard");
 }
 
 export async function login(_: FormState, f: FormData): Promise<FormState> {
@@ -292,8 +293,7 @@ export async function addGame(_: FormState, f: FormData): Promise<FormState> {
       tiktokHandle: tiktok || null,
     },
   });
-  const welcome = await payWelcomeBonus(user.id);
-  redirect(`/dashboard/games/${game.id}${welcome ? "?welcome=1" : ""}`);
+  redirect(`/dashboard/games/${game.id}`);
 }
 
 export async function createCampaign(_: FormState, f: FormData): Promise<FormState> {
