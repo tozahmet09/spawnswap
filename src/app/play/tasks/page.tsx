@@ -6,8 +6,7 @@ import { expireStaleTasks, isVerifiedGame, payPlayed } from "@/lib/credits";
 import { REQUIRED_SECONDS } from "@/lib/money";
 import { robloxGameUrl } from "@/lib/roblox";
 import { GameIcon } from "@/components/GameIcon";
-import { Burst } from "@/components/Burst";
-import { PresencePoller } from "@/components/PresencePoller";
+import { LivePlay, LiveProgress } from "@/components/LivePlay";
 import { RateForm } from "@/components/RateForm";
 import { AbandonButton } from "@/components/AbandonButton";
 
@@ -25,7 +24,7 @@ export default async function Tasks({ searchParams }: { searchParams: Promise<{ 
     take: 30,
   });
   const mins = Math.round(REQUIRED_SECONDS / 60);
-  const justNow = Date.now() - 15_000;
+  const now = Date.now();
   // Only show the "open in Roblox" banner while that game still needs playtime.
   const startedOpen = started && tasks.some((t) => t.game.placeId === started && t.status === "PENDING");
   // Games without the tracker script are timed by checking the player's Roblox status from this page.
@@ -42,10 +41,9 @@ export default async function Tasks({ searchParams }: { searchParams: Promise<{ 
       </div>
 
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-      {watching && <PresencePoller />}
       {watching && (
         <p className="notice">
-          You can close this page and just play. We check your Roblox status every minute, so minutes only count while you&apos;re in the game. Your credit comes in by itself once you hit 10 minutes.
+          You can close this page and just play. We check your Roblox status every minute, so minutes only count while you&apos;re in the game. The timer here updates by itself, and your credit comes in once you hit {mins} minutes.
         </p>
       )}
 
@@ -60,23 +58,29 @@ export default async function Tasks({ searchParams }: { searchParams: Promise<{ 
 
       {tasks.length === 0 && <p className="text-mute">Nothing yet. <Link href="/#earn-title" className="text-lime underline">Pick a game that gives credits</Link>.</p>}
 
+      <LivePlay
+        initial={tasks.map((t) => ({
+          id: t.id,
+          status: t.status,
+          playedSeconds: t.playedSeconds,
+          lastPingAt: t.lastPingAt?.getTime() ?? null,
+          presenceCheckedAt: t.presenceCheckedAt?.getTime() ?? null,
+          completedAt: t.completedAt?.getTime() ?? null,
+        }))}
+        games={tasks.map((t) => ({ id: t.id, name: t.game.name }))}
+        required={REQUIRED_SECONDS}
+        watchPresence={watching}
+        serverNow={now}
+      >
       <ul className="divide-y divide-line border-y border-line">
         {tasks.map((t) => {
-          const pct = Math.min(100, Math.round((t.playedSeconds / REQUIRED_SECONDS) * 100));
           return (
             <li key={t.id} className="space-y-4 py-5">
               <div className="flex items-center gap-4">
                 <GameIcon url={t.game.iconUrl} className="h-12 w-12 shrink-0 rounded-ctl" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-semibold">{t.game.name}</div>
-                  {t.status === "PENDING" && (
-                    <div className="mt-2 flex items-center gap-3">
-                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-line">
-                        <div className="h-full rounded-full bg-lime transition-[width] duration-700" style={{ width: `${Math.max(pct, 3)}%` }} />
-                      </div>
-                      <span className="text-xs text-mute tabular-nums">{Math.floor(t.playedSeconds / 60)}/{mins} min</span>
-                    </div>
-                  )}
+                  {t.status === "PENDING" && <LiveProgress id={t.id} required={REQUIRED_SECONDS} fallback={t.playedSeconds} />}
                   {t.status === "COMPLETED" && (
                     <div className="inline-flex items-center gap-1.5 text-sm text-verified"><CheckCircle2 className="h-4 w-4" /> Played {mins} min · credit earned</div>
                   )}
@@ -91,12 +95,12 @@ export default async function Tasks({ searchParams }: { searchParams: Promise<{ 
                   <span className="inline-flex items-center gap-1 text-sm text-mute"><Ticket className="h-4 w-4 text-lime" /> +1</span>
                 )}
               </div>
-              {t.status === "COMPLETED" && t.completedAt && t.completedAt.getTime() > justNow && <Burst label="+1 credit" />}
               {t.status === "COMPLETED" && t.rating === null && t.feedback === null && <RateForm taskId={t.id} game={t.game.name} />}
             </li>
           );
         })}
       </ul>
+      </LivePlay>
     </div>
   );
 }
