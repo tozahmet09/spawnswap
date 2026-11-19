@@ -67,7 +67,9 @@ export default async function Tasks({ searchParams }: { searchParams: Promise<{ 
           presenceCheckedAt: t.presenceCheckedAt?.getTime() ?? null,
           completedAt: t.completedAt?.getTime() ?? null,
         }))}
-        games={tasks.map((t) => ({ id: t.id, name: t.game.name }))}
+        unrated={tasks
+          .filter((t) => t.status === "COMPLETED" && t.rating === null && t.feedback === null && t.completedAt)
+          .map((t) => ({ id: t.id, completedAt: t.completedAt!.getTime() }))}
         required={REQUIRED_SECONDS}
         watchPresence={watching}
         serverNow={now}

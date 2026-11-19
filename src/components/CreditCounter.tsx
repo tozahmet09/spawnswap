@@ -3,9 +3,12 @@
 import { Ticket } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useHeldCredits } from "./creditHold";
 
 /** The one fixed place credits live. Counts up and pops when the balance grows. */
-export function CreditCounter({ value }: { value: number }) {
+export function CreditCounter({ value: total }: { value: number }) {
+  // A just-finished play's credit is shown arriving in its completion moment, not before.
+  const value = total - useHeldCredits();
   const [shown, setShown] = useState(value);
   const [gain, setGain] = useState<{ n: number; key: number } | null>(null);
   const prev = useRef(value);

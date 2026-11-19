@@ -1,12 +1,17 @@
 "use client";
 
-import { startTransition, useActionState } from "react";
+import { startTransition, useActionState, useEffect } from "react";
+import { celebrate } from "./creditHold";
 import { rateGame } from "@/app/actions";
 import { StarPicker } from "./StarPicker";
 
-/** Uber-style: the credit is already paid. Rate with stars (words optional), or skip. */
+/** Uber-style: rate with stars (words optional), or skip. Either one plays the +1 credit moment. */
 export function RateForm({ taskId, game }: { taskId: string; game: string }) {
   const [state, action, pending] = useActionState(rateGame, undefined);
+  const done = !!state?.ok;
+  useEffect(() => {
+    if (done) celebrate(taskId, game);
+  }, [done, taskId, game]);
   if (state?.ok) return <p className="text-sm text-verified">{state.ok}</p>;
   const send = (fd: FormData) => startTransition(() => action(fd));
   return (
