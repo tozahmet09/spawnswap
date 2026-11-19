@@ -8,8 +8,8 @@ import { ArrowRight, Gift } from "lucide-react";
 const QUIET = ["/dashboard", "/dashboard/games/new", "/signup", "/login"];
 
 /**
- * Thin line under the nav for signed-in users who haven't added a game yet while welcome credits are open.
- * Many people sign up and never add their game, so they never see the credits they'd get.
+ * Thin line under the nav for signed-in users who have credits but haven't added a game yet.
+ * Many people sign up and never add their game, so their welcome credits never bring anyone.
  */
 export function WelcomeBar({ credits }: { credits: number }) {
   const path = usePathname();
@@ -21,8 +21,8 @@ export function WelcomeBar({ credits }: { credits: number }) {
     >
       <Gift className="h-3.5 w-3.5 shrink-0 text-lime" aria-hidden />
       <span>
-        Add your Roblox game and get <b className="font-semibold text-lime">{credits} free credits</b>
-        <span className="hidden sm:inline"> to bring players to it</span>
+        Your <b className="font-semibold text-lime">{credits === 1 ? "1 credit" : `${credits} credits`}</b> {credits === 1 ? "is" : "are"} ready.
+        {" "}Add your game<span className="hidden sm:inline"> to bring players to it</span>
       </span>
       <ArrowRight className="h-3.5 w-3.5 shrink-0 text-lime transition group-hover:translate-x-0.5" aria-hidden />
     </Link>

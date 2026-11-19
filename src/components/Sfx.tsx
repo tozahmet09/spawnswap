@@ -8,7 +8,7 @@ import { Volume2, VolumeX } from "lucide-react";
  * Browsers only allow sound after the visitor clicks something, so nothing ever plays on page load.
  * Muted state is remembered in this browser.
  */
-type Name = "pop" | "ding" | "whoosh" | "tick" | "complete";
+type Name = "pop" | "ding" | "whoosh" | "tick" | "complete" | "welcome";
 
 let ctx: AudioContext | null = null;
 const KEY = "ss-muted";
@@ -63,6 +63,17 @@ export function playSfx(name: Name) {
     tone(a, 110, 0.74, 0.5, "sine", 0.16, 70);
     [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(a, f, 0.74 + i * 0.07, 1.1 - i * 0.1, "triangle", 0.09));
     [2093, 2637, 3136].forEach((f, i) => tone(a, f, 0.95 + i * 0.09, 0.5, "sine", 0.025));
+  }
+  if (name === "welcome") {
+    // Signup gift: the ring sweep, then five coin blips climbing as the credits count in, then the chord.
+    tone(a, 220, 0.12, 0.6, "sine", 0.05, 660);
+    [987.77, 1174.66, 1318.51, 1567.98, 1975.53].forEach((f, i) => {
+      tone(a, f, 0.85 + i * 0.13, 0.12, "square", 0.03);
+      tone(a, f * 2, 0.86 + i * 0.13, 0.18, "sine", 0.04);
+    });
+    tone(a, 110, 1.55, 0.5, "sine", 0.16, 70);
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(a, f, 1.55 + i * 0.07, 1.2 - i * 0.1, "triangle", 0.09));
+    [2093, 2637, 3136].forEach((f, i) => tone(a, f, 1.75 + i * 0.09, 0.5, "sine", 0.025));
   }
   if (name === "whoosh") {
     const len = Math.floor(a.sampleRate * 0.45);

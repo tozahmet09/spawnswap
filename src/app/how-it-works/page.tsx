@@ -72,7 +72,7 @@ export default function HowItWorks() {
           </Step>
           <Step n={2} title="Alex adds a game">
             Alex pastes the Roblox link. The game shows on the site right away.
-            {EARLY_BIRD_CREDITS > 0 && <> The first {EARLY_BIRD_ACCOUNTS} developers who add a game get {EARLY_BIRD_CREDITS} free credits.</>}
+            {EARLY_BIRD_CREDITS > 0 && <> The first {EARLY_BIRD_ACCOUNTS} developers get {EARLY_BIRD_CREDITS} free credits as soon as they sign up.</>}
           </Step>
           <Step n={3} title="Alex plays 3 games and asks for 3 players">
             {minutes} minutes each gives Alex 3 credits.

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /**
- * Daily "add your game, your welcome credits are waiting" email (see vercel.json).
+ * Daily "your credits are ready, add your game" email (see vercel.json).
  * If CRON_SECRET is set, Vercel sends it as a Bearer token and every other caller is turned away.
  * Without it, an extra call is harmless: each account gets this email at most once.
  *
