@@ -73,6 +73,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                       )}
                       <Link href="/dashboard/billing" className="block px-4 py-2.5 hover:bg-line">Plan &amp; billing</Link>
                       <Link href="/dashboard/account" className="block px-4 py-2.5 hover:bg-line">Account</Link>
+                      <div className="border-t border-line pt-1">
+                        <Link href="/play/tasks" className="block px-4 py-2.5 hover:bg-line">My progress</Link>
+                        <Link href="/how-it-works" className="block px-4 py-2.5 hover:bg-line">How it works</Link>
+                        <Link href="/pricing" className="block px-4 py-2.5 hover:bg-line">Pricing</Link>
+                      </div>
                       {admin && (
                         <div className="border-t border-line pt-1">
                           <p className="px-4 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-lime/80">Admin</p>
