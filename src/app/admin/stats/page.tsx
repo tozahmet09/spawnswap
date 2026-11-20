@@ -21,7 +21,8 @@ export default async function Stats() {
     ]);
     return { signups, linked, started, played, devs, games };
   };
-  const [week, all, recent, games] = await Promise.all([
+  const now = new Date();
+  const [week, all, recent, games, live, soon, archived] = await Promise.all([
     counts(since(7)),
     counts(),
     db.user.findMany({
@@ -30,6 +31,10 @@ export default async function Stats() {
       select: { id: true, displayName: true, createdAt: true, robloxVerified: true, _count: { select: { games: true, tasks: true } } },
     }),
     db.game.findMany({ orderBy: { createdAt: "desc" }, take: 30, select: { id: true, name: true, createdAt: true, hiddenAt: true, releaseAt: true } }),
+    // Live = on the public pages now: not archived and already released.
+    db.game.count({ where: { hiddenAt: null, OR: [{ releaseAt: null }, { releaseAt: { lte: now } }] } }),
+    db.game.count({ where: { hiddenAt: null, releaseAt: { gt: now } } }),
+    db.game.count({ where: { hiddenAt: { not: null } } }),
   ]);
   const rows: [string, keyof typeof all][] = [
     ["Signed up", "signups"],
@@ -47,6 +52,20 @@ export default async function Stats() {
         <p className="eyebrow">Admin</p>
         <h1 className="mt-1 page-title">Site numbers</h1>
         <p className="mt-2 text-sm text-mute">Where new people stop, from signing up to adding a game. Times in UTC.</p>
+      </div>
+      <div className="flex flex-wrap gap-x-10 gap-y-4">
+        <div>
+          <p className="text-4xl font-semibold tabular-nums text-lime">{live}</p>
+          <p className="mt-1 text-sm text-mute">Live games</p>
+        </div>
+        <div>
+          <p className="text-4xl font-semibold tabular-nums">{soon}</p>
+          <p className="mt-1 text-sm text-mute">Coming soon</p>
+        </div>
+        <div>
+          <p className="text-4xl font-semibold tabular-nums">{archived}</p>
+          <p className="mt-1 text-sm text-mute">Archived</p>
+        </div>
       </div>
       <table className="w-full max-w-md text-sm tabular-nums">
         <thead className="text-left text-mute">
@@ -77,7 +96,7 @@ export default async function Stats() {
             <li key={g.id} className="flex flex-wrap gap-x-4 py-2">
               <span className="w-36 text-mute tabular-nums">{day(g.createdAt)}</span>
               <span className="min-w-0 flex-1 truncate">{g.name}</span>
-              <span className="text-mute">{g.hiddenAt ? "archived" : g.releaseAt && g.releaseAt > new Date() ? "coming soon" : "live"}</span>
+              <span className="text-mute">{g.hiddenAt ? "archived" : g.releaseAt && g.releaseAt > now ? "coming soon" : "live"}</span>
             </li>
           ))}
         </ul>
