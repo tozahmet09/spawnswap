@@ -51,7 +51,7 @@ export default function Terms() {
       <h2>Creators and video requests</h2>
       <ul>
         <li>On the Social media tab, developers and creators (people who make TikTok or YouTube videos) can send each other video requests.</li>
-        <li>You must be 18 or older to list yourself as a creator. Information on your creator card, like your follower count, must be true.</li>
+        <li>You must be 18 or older to list yourself as a creator, and need at least 1,000 followers. Information on your creator listing, like your follower count, must be true.</li>
         <li>When a request is accepted, we share both sides&apos; email addresses with each other so you can talk.</li>
         <li>Price, payment and delivery are agreed directly between the developer and the creator. Spawnswap is not part of that deal, doesn&apos;t handle the money and isn&apos;t responsible if one side doesn&apos;t deliver or pay.</li>
         <li>Paid or free-in-exchange videos must be clearly marked as ads (for example #ad or the platform&apos;s paid partnership label), and must follow the platform&apos;s rules and the Roblox Terms of Use.</li>

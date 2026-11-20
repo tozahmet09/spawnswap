@@ -30,9 +30,8 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getUser();
   // Signed up but no game yet: remind them on every page that their credits are waiting for a game.
-  const creator = user?.role === "CREATOR";
   const admin = isAdminEmail(user?.email);
-  const noGameYet = !!user && !creator && user.credits > 0 && (await db.game.count({ where: { ownerId: user.id } })) === 0;
+  const noGameYet = !!user && user.credits > 0 && (await db.game.count({ where: { ownerId: user.id } })) === 0;
   return (
     <html lang="en" className={`${body.variable} ${mono.variable} ${display.variable}`}>
       <body>
@@ -50,7 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <span className="hidden min-[380px]:contents"><SoundToggle /></span>
               {user ? (
                 <>
-                  <Link href={creator ? "/social/requests" : "/dashboard"} className="hidden min-h-[40px] items-center px-2 text-mute transition hover:text-cream md:flex">{creator ? "My Requests" : "My Games"}</Link>
+                  <Link href="/dashboard" className="hidden min-h-[40px] items-center px-2 text-mute transition hover:text-cream md:flex">My Games</Link>
                   <CreditCounter value={user.credits} />
                   <details className="group relative">
                     <summary className="flex min-h-[40px] cursor-pointer list-none items-center gap-1 rounded-full pl-1 pr-1.5 [&::-webkit-details-marker]:hidden" aria-label="Account menu">
@@ -60,17 +59,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                       <ChevronDown className="h-4 w-4 text-mute transition group-open:rotate-180" />
                     </summary>
                     <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-ctl border border-line bg-panel py-1 text-sm shadow-[0_12px_32px_rgba(0,0,0,.45)]">
-                      {creator ? (
-                        <>
-                          <Link href="/social/requests" className="block px-4 py-2.5 hover:bg-line">My requests</Link>
-                          <Link href="/social/profile" className="block px-4 py-2.5 hover:bg-line">My creator card</Link>
-                        </>
-                      ) : (
-                        <>
-                          <Link href="/dashboard" className="block px-4 py-2.5 hover:bg-line">My Games</Link>
-                          <Link href="/social/requests" className="block px-4 py-2.5 hover:bg-line">Video requests</Link>
-                        </>
-                      )}
+                      <Link href="/dashboard" className="block px-4 py-2.5 hover:bg-line">My Games</Link>
+                      <Link href="/social/profile" className="block px-4 py-2.5 hover:bg-line">My creator listing</Link>
+                      <Link href="/social/requests" className="block px-4 py-2.5 hover:bg-line">Video requests</Link>
                       <Link href="/dashboard/billing" className="block px-4 py-2.5 hover:bg-line">Plan &amp; billing</Link>
                       <Link href="/dashboard/account" className="block px-4 py-2.5 hover:bg-line">Account</Link>
                       <div className="border-t border-line pt-1">

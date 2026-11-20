@@ -3,6 +3,7 @@ import { signup } from "../actions";
 import { Form } from "@/components/Form";
 import { EARLY_BIRD_CREDITS, REFERRAL_CREDITS } from "@/lib/money";
 import { welcomeSpotsLeft } from "@/lib/welcome";
+import { MIN_FOLLOWERS } from "@/lib/creators";
 
 export default async function Signup({ searchParams }: { searchParams: Promise<{ ref?: string; as?: string }> }) {
   const { ref = "", as } = await searchParams;
@@ -14,7 +15,7 @@ export default async function Signup({ searchParams }: { searchParams: Promise<{
       <div>
         <p className="eyebrow">Free account</p>
         <h1 className="mt-1 page-title">{creator ? "Promote Roblox games" : "Get your game seen"}</h1>
-        {creator && <p className="mt-2 text-sm text-mute">Make a creator card, and devs can ask you for videos about their games.</p>}
+        {creator && <p className="mt-2 text-sm text-mute">Post a creator listing, and devs can pick you for videos about their games. Need {MIN_FOLLOWERS.toLocaleString("en-US")}+ followers.</p>}
         {welcome && !creator && <p className="mt-2 text-sm text-mute">Sign up and get <span className="text-lime">{EARLY_BIRD_CREDITS} free credits</span> right away. Only for the first developers.</p>}
       </div>
       {code && <p className="rounded-ctl border border-lime/40 bg-lime/10 px-4 py-3 text-sm">A friend invited you. You start with +{REFERRAL_CREDITS} bonus credits.</p>}

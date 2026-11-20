@@ -1,7 +1,7 @@
 import { parseTiktokHandle } from "@/lib/tiktok";
 
 // Creators make TikTok / YouTube videos about Roblox games. They meet devs on the Social media tab (/social):
-// either side sends a request, and once it is accepted we email both. Payment is between them for now.
+// creators post a listing, a dev asks one for a video, and once the creator accepts we email both. Payment is between them for now.
 
 export const PLATFORMS = { TIKTOK: "TikTok", YOUTUBE: "YouTube" } as const;
 export type Platform = keyof typeof PLATFORMS;
@@ -34,7 +34,8 @@ export function formatFollowers(n: number) {
 export const formatPrice = (usd: number | null) => (usd == null ? "Ask for price" : usd === 0 ? "Free" : `$${usd} / video`);
 
 export const ABOUT_MAX = 300;
-export const POST_MAX = 300;
+/** Creators need at least this many followers (self-declared) to be listed. */
+export const MIN_FOLLOWERS = 1000;
 export const MESSAGE_MAX = 500;
 export const INSTRUCTIONS_MAX = 1000;
 /** How many video requests one account can send per day (stops spam). */

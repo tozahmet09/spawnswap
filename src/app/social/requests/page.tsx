@@ -43,7 +43,7 @@ export default async function Requests() {
         <p className="eyebrow">Social media</p>
         <h1 className="mt-1 page-title">Video requests</h1>
         <p className="mt-2 text-mute">
-          Requests between you and {user.role === "CREATOR" ? "developers" : "creators"}. Once one is accepted, we email you both.{" "}
+          Video requests you sent to creators, and ones sent to your creator listing. Once one is accepted, we email you both.{" "}
           <Link href="/social" className="text-lime hover:underline">Find more on Social media</Link>
         </p>
       </div>
