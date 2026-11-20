@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Privacy Policy" };
 export default function Privacy() {
   const op = operator();
   return (
-    <LegalPage title="Privacy Policy" updated="November 9, 2026">
+    <LegalPage title="Privacy Policy" updated="November 20, 2026">
       <p>We collect as little as we can and never sell it. This page explains what we keep, why, for how long, and what you can ask us to do with it.</p>
 
       <h2>Who is responsible</h2>
@@ -55,6 +55,7 @@ export default function Privacy() {
         <li>Our hosting, database and file storage providers (Vercel and Neon), to run the site.</li>
         <li>Our email provider (Resend), only to send you emails you asked for, like a password reset link, and, if you have a game on Spawnswap, a weekly Friday summary of who played it (one click in that email turns it off).</li>
         <li>Roblox, only in the sense that we ask Roblox&apos;s public APIs about the user ids and games on Spawnswap.</li>
+        <li>The other side of a video request on the Social media tab: when you accept a request, or one you sent is accepted, we share your email with that developer or creator so you can talk. A creator card (username, follower count, price, description) and a developer&apos;s post are public.</li>
         <li>Nobody else, unless the law requires it.</li>
       </ul>
       <p>These providers may store data outside your country (for example in the United States or the EU). We only use providers that protect it with standard contractual safeguards.</p>

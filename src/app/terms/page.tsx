@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Terms of Use" };
 export default function Terms() {
   const op = operator();
   return (
-    <LegalPage title="Terms of Use" updated="November 5, 2026">
+    <LegalPage title="Terms of Use" updated="November 20, 2026">
       <p>Spawnswap helps Roblox developers get their games played and lets players discover new games. By creating an account you agree to these terms.</p>
 
       <h2>Who can use Spawnswap</h2>
@@ -46,6 +46,16 @@ export default function Terms() {
         <li>Games and trailers must be suitable for all ages and follow Roblox community standards. We may remove anything that isn&apos;t.</li>
         <li>You let us show your game&apos;s name, icon and trailer on Spawnswap to promote it.</li>
         <li>Ratings, feedback and comments are public. Developers can delete comments on their own games, and we may remove anything that breaks these rules.</li>
+      </ul>
+
+      <h2>Creators and video requests</h2>
+      <ul>
+        <li>On the Social media tab, developers and creators (people who make TikTok or YouTube videos) can send each other video requests.</li>
+        <li>You must be 18 or older to list yourself as a creator. Information on your creator card, like your follower count, must be true.</li>
+        <li>When a request is accepted, we share both sides&apos; email addresses with each other so you can talk.</li>
+        <li>Price, payment and delivery are agreed directly between the developer and the creator. Spawnswap is not part of that deal, doesn&apos;t handle the money and isn&apos;t responsible if one side doesn&apos;t deliver or pay.</li>
+        <li>Paid or free-in-exchange videos must be clearly marked as ads (for example #ad or the platform&apos;s paid partnership label), and must follow the platform&apos;s rules and the Roblox Terms of Use.</li>
+        <li>No spam requests. We may hide cards or posts and limit accounts that misuse this.</li>
       </ul>
 
       <h2>Purchases</h2>

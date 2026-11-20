@@ -18,6 +18,8 @@ export const dynamic = "force-dynamic";
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ reset?: string; deleted?: string; welcome?: string }> }) {
   const { reset, deleted, welcome } = await searchParams;
   const user = await requireUser();
+  // Creator accounts have no games; their home is the Social media tab.
+  if (user.role === "CREATOR") redirect("/social/requests");
   // Signed up before welcome credits moved to signup and never added a game: pay now, then show the moment.
   if (!user.welcomeBonusPaid && (await payWelcomeBonus(user.id))) redirect("/dashboard?welcome=1");
   const games = await db.game.findMany({

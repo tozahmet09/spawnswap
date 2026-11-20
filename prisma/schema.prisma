@@ -48,6 +48,13 @@ model User {
   // Friday "who played your game this week" email. On by default; the email's unsubscribe link turns it off.
   weeklyReport         Boolean   @default(true)
   weeklyReportSentAt   DateTime?
+  // What the account is for, picked at signup: DEV (adds games) or CREATOR (makes videos about games).
+  role                 String    @default("DEV") // DEV | CREATOR
+  // A dev's optional post on the Social media tab, e.g. "Looking for TikTokers to show my obby". Null = no post.
+  devPost              String?
+  devPostAt            DateTime?
+  creatorProfile   CreatorProfile?
+  videoRequests    VideoRequest[]
   sessions         Session[]
   passwordResets   PasswordReset[]
   games            Game[]
@@ -126,6 +133,7 @@ model Game {
   payments       Payment[]
   likes          Like[]
   comments       Comment[]
+  videoRequests  VideoRequest[]
 }
 
 // A dev spends credits to get N verified players. Credits are reserved up front.
@@ -243,4 +251,49 @@ model RateHit {
   createdAt DateTime @default(now())
 
   @@index([key, createdAt])
+}
+
+// A creator's public card on /creators: where they post, how big they are and what one video costs.
+model CreatorProfile {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  platform   String   // TIKTOK | YOUTUBE
+  handle     String   // without the @
+  followers  Int
+  // Price for one video in whole US dollars. Null = "ask me".
+  priceUsd   Int?
+  about      String
+  // When the creator ticked "I'm 18 or older". Only adults are listed, because devs pay them.
+  adultAt    DateTime
+  // The creator can take the card off the list without deleting it.
+  hidden     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requests   VideoRequest[]
+
+  @@index([hidden, followers])
+}
+
+// A video deal between a creator and a dev. Either side can start it:
+//  - a creator offers to make a video (fromRole CREATOR); the dev accepts by picking the game and writing instructions,
+//  - a dev asks a creator (fromRole DEV) with the game and instructions already filled in; the creator accepts.
+// On ACCEPTED we email both their contact details. Payment happens between them for now.
+model VideoRequest {
+  id           String         @id @default(cuid())
+  creatorId    String
+  devId        String
+  fromRole     String         // CREATOR | DEV
+  message      String
+  status       String         @default("PENDING") // PENDING | ACCEPTED | DECLINED
+  gameId       String?
+  instructions String?
+  createdAt    DateTime       @default(now())
+  decidedAt    DateTime?
+  creator      CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  dev          User           @relation(fields: [devId], references: [id], onDelete: Cascade)
+  game         Game?          @relation(fields: [gameId], references: [id], onDelete: SetNull)
+
+  @@index([creatorId, createdAt])
+  @@index([devId, createdAt])
 }
