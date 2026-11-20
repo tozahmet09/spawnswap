@@ -8,6 +8,7 @@ import { getUser } from "@/lib/auth";
 import { CreditCounter } from "@/components/CreditCounter";
 import { WelcomeBar } from "@/components/WelcomeBar";
 import { db } from "@/lib/db";
+import { isAdminEmail } from "@/lib/admin";
 import { Particles } from "@/components/Particles";
 import { SoundToggle } from "@/components/Sfx";
 import { Analytics } from "@vercel/analytics/next";
@@ -30,6 +31,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const user = await getUser();
   // Signed up but no game yet: remind them on every page that their credits are waiting for a game.
   const creator = user?.role === "CREATOR";
+  const admin = isAdminEmail(user?.email);
   const noGameYet = !!user && !creator && user.credits > 0 && (await db.game.count({ where: { ownerId: user.id } })) === 0;
   return (
     <html lang="en" className={`${body.variable} ${mono.variable} ${display.variable}`}>
@@ -57,7 +59,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                       </span>
                       <ChevronDown className="h-4 w-4 text-mute transition group-open:rotate-180" />
                     </summary>
-                    <div className="absolute right-0 mt-2 w-48 overflow-hidden rounded-ctl border border-line bg-panel py-1 text-sm shadow-[0_12px_32px_rgba(0,0,0,.45)]">
+                    <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-ctl border border-line bg-panel py-1 text-sm shadow-[0_12px_32px_rgba(0,0,0,.45)]">
                       {creator ? (
                         <>
                           <Link href="/social/requests" className="block px-4 py-2.5 hover:bg-line">My requests</Link>
@@ -71,6 +73,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                       )}
                       <Link href="/dashboard/billing" className="block px-4 py-2.5 hover:bg-line">Plan &amp; billing</Link>
                       <Link href="/dashboard/account" className="block px-4 py-2.5 hover:bg-line">Account</Link>
+                      {admin && (
+                        <div className="border-t border-line pt-1">
+                          <p className="px-4 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-lime/80">Admin</p>
+                          <Link href="/admin/stats" className="block px-4 py-2.5 hover:bg-line">Site numbers</Link>
+                          <Link href="/admin/trailers" className="block px-4 py-2.5 hover:bg-line">Trailer review</Link>
+                          <Link href="/admin/series" className="block px-4 py-2.5 hover:bg-line">Video series (testing)</Link>
+                        </div>
+                      )}
                       <form action="/api/logout" method="post" className="border-t border-line">
                         <button className="block w-full px-4 py-2.5 text-left text-mute hover:bg-line hover:text-cream">Log Out</button>
                       </form>
