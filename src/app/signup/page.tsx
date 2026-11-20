@@ -4,20 +4,37 @@ import { Form } from "@/components/Form";
 import { EARLY_BIRD_CREDITS, REFERRAL_CREDITS } from "@/lib/money";
 import { welcomeSpotsLeft } from "@/lib/welcome";
 
-export default async function Signup({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
-  const { ref = "" } = await searchParams;
+export default async function Signup({ searchParams }: { searchParams: Promise<{ ref?: string; as?: string }> }) {
+  const { ref = "", as } = await searchParams;
+  const creator = as === "creator";
   const code = /^[a-z0-9]{4,12}$/i.test(ref) ? ref : "";
   const welcome = EARLY_BIRD_CREDITS > 0 && (await welcomeSpotsLeft()) > 0;
   return (
     <div className="mx-auto max-w-sm space-y-6 py-6">
       <div>
         <p className="eyebrow">Free account</p>
-        <h1 className="mt-1 page-title">Get your game seen</h1>
-        {welcome && <p className="mt-2 text-sm text-mute">Sign up and get <span className="text-lime">{EARLY_BIRD_CREDITS} free credits</span> right away. Only for the first developers.</p>}
+        <h1 className="mt-1 page-title">{creator ? "Promote Roblox games" : "Get your game seen"}</h1>
+        {creator && <p className="mt-2 text-sm text-mute">Make a creator card, and devs can ask you for videos about their games.</p>}
+        {welcome && !creator && <p className="mt-2 text-sm text-mute">Sign up and get <span className="text-lime">{EARLY_BIRD_CREDITS} free credits</span> right away. Only for the first developers.</p>}
       </div>
       {code && <p className="rounded-ctl border border-lime/40 bg-lime/10 px-4 py-3 text-sm">A friend invited you. You start with +{REFERRAL_CREDITS} bonus credits.</p>}
       <Form action={signup} submit="Create account">
         <input type="hidden" name="ref" value={code} />
+        <fieldset>
+          <legend className="label">I&apos;m here to</legend>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { v: "DEV", t: "Get players", s: "I make Roblox games" },
+              { v: "CREATOR", t: "Promote games", s: "I make TikTok / YouTube videos" },
+            ].map((o) => (
+              <label key={o.v} className="cursor-pointer rounded-ctl border border-line px-3 py-2.5 transition hover:border-faint has-[:checked]:border-lime has-[:checked]:bg-lime/[.08] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-lime">
+                <input type="radio" name="role" value={o.v} defaultChecked={(o.v === "CREATOR") === creator} className="sr-only" />
+                <span className="block text-sm font-semibold text-cream">{o.t}</span>
+                <span className="block text-xs text-mute">{o.s}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <div><label htmlFor="displayName" className="label">Name or studio</label><input id="displayName" name="displayName" className="input" /></div>
         <div><label htmlFor="email" className="label">Email</label><input id="email" name="email" type="email" required className="input" /></div>
         <div><label htmlFor="password" className="label">Password</label><input id="password" name="password" type="password" minLength={8} required className="input" /></div>

@@ -7,6 +7,7 @@ const LINKS: { href: string; label: string; short?: string; desktopOnly?: boolea
   { href: "/", label: "Home", desktopOnly: true },
   { href: "/play", label: "Progress" },
   { href: "/leaderboard", label: "Leaderboard", short: "Top" },
+  { href: "/social", label: "Social media", short: "Social" },
   { href: "/how-it-works", label: "How it works", desktopOnly: true },
   { href: "/pricing", label: "Pricing", desktopOnly: true },
 ];
@@ -23,12 +24,12 @@ export function NavLinks() {
             key={href}
             href={href}
             aria-current={on ? "page" : undefined}
-            className={`${desktopOnly ? "hidden sm:flex" : "flex"} relative h-14 items-center whitespace-nowrap px-2 text-sm transition sm:px-3 ${
+            className={`${desktopOnly ? "hidden sm:flex" : "flex"} relative h-14 items-center whitespace-nowrap px-1.5 text-sm transition sm:px-3 ${
               on ? "font-semibold text-lime" : "text-cream/80 hover:text-cream"
             }`}
           >
             {short ? <><span className="sm:hidden">{short}</span><span className="hidden sm:inline">{label}</span></> : label}
-            {on && <span aria-hidden className="absolute inset-x-2 bottom-0 h-[3px] rounded-full bg-lime shadow-[0_0_12px_rgba(200,240,49,.8)] sm:inset-x-3" />}
+            {on && <span aria-hidden className="absolute inset-x-1.5 bottom-0 h-[3px] rounded-full bg-lime shadow-[0_0_12px_rgba(200,240,49,.8)] sm:inset-x-3" />}
           </Link>
         );
       })}
