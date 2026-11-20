@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ScoreBadge } from "@/components/ScoreBadge";
+import { gameScore, MIN_RATINGS } from "@/lib/score";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { BadgeCheck, Clapperboard, Play, Star, Ticket, Users } from "lucide-react";
@@ -163,7 +165,7 @@ export default async function GamePublic({ params }: { params: Promise<{ id: str
 
       {/* Numbers in one line, no boxes. */}
       <dl className="grid grid-cols-2 gap-x-6 gap-y-5 border-y border-line py-5 sm:grid-cols-4">
-        <Stat label="Rating" value={stats._avg.rating ? stats._avg.rating.toFixed(1) : "–"} icon={stats._avg.rating ? <Star className="h-4 w-4 fill-lime text-lime" /> : null} />
+        <Stat label="Score" value={String(gameScore(stats._avg.rating, ratingCount) ?? "TBD")} />
         <Stat label="Ratings" value={ratingCount.toLocaleString()} />
         <Stat label="Playing now" value={game.playing.toLocaleString()} icon={<Users className="h-4 w-4 text-mute" />} />
         <Stat label="Roblox visits" value={game.visits.toLocaleString()} />
@@ -184,10 +186,16 @@ export default async function GamePublic({ params }: { params: Promise<{ id: str
             {ratingCount > 0 && (
               <div className="flex flex-wrap items-center gap-8">
                 <div>
-                  <div className="flex items-center gap-1.5 font-display text-[40px] font-semibold leading-none tabular-nums">
-                    {stats._avg.rating!.toFixed(1)} <Star className="h-7 w-7 fill-lime text-lime" />
+                  <div className="flex items-center gap-3">
+                    <ScoreBadge avg={stats._avg.rating} count={ratingCount} size="lg" />
+                    <div className="text-sm">
+                      <div className="font-semibold text-cream">{gameScore(stats._avg.rating, ratingCount) == null ? "No score yet" : "Score"}</div>
+                      <div className="text-xs text-mute">
+                        {ratingCount} rating{ratingCount === 1 ? "" : "s"}
+                        {ratingCount < MIN_RATINGS && ` · needs ${MIN_RATINGS}`}
+                      </div>
+                    </div>
                   </div>
-                  <p className="mt-1 text-xs text-mute">{ratingCount} rating{ratingCount === 1 ? "" : "s"}</p>
                 </div>
                 <ul className="min-w-[180px] flex-1 space-y-1">
                   {[5, 4, 3, 2, 1].map((n) => (

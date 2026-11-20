@@ -1,7 +1,8 @@
 "use client";
 
+import { ScoreBadge } from "@/components/ScoreBadge";
 import { useEffect, useRef, useState } from "react";
-import { BadgeCheck, Clapperboard, Play, Star, Ticket } from "lucide-react";
+import { BadgeCheck, Clapperboard, Play, Ticket } from "lucide-react";
 import { playGame } from "@/app/actions";
 import type { Trailer } from "@/lib/trailer";
 import { GameIcon } from "./GameIcon";
@@ -154,12 +155,12 @@ export function Media({ game, active, priority }: { game: TrailerGame; active: b
   );
 }
 
-/** "★ 4.5 (12)": average stars and number of ratings. "New" when nobody rated yet. */
+/** The game's score box (0-100) and number of ratings. "New" when nobody rated yet. */
 export function Stars({ rating }: { rating?: TrailerGame["rating"] }) {
   if (!rating?.count) return <span className="font-body">New</span>;
   return (
-    <span className="inline-flex items-center gap-1 tabular-nums" aria-label={`${rating.avg.toFixed(1)} stars from ${rating.count} rating${rating.count > 1 ? "s" : ""}`}>
-      <Star className="h-3 w-3 fill-lime text-lime" aria-hidden /> <span className="text-cream">{rating.avg.toFixed(1)}</span> ({rating.count})
+    <span className="inline-flex items-center gap-1 tabular-nums">
+      <ScoreBadge avg={rating.avg} count={rating.count} size="xs" /> ({rating.count})
     </span>
   );
 }
@@ -298,7 +299,7 @@ export function ImmersiveHero({ games }: { games: TrailerGame[] }) {
           <div key={`t-${g.id}`} className="max-w-xl animate-rise-in">
             <p className="flex items-center gap-2 font-mono text-xs uppercase tracking-[.06em] text-cream/80">
               <span className="h-1.5 w-1.5 rounded-full bg-lime" aria-hidden />
-              {g.rating?.count ? `★ ${g.rating.avg.toFixed(1)} (${g.rating.count} rating${g.rating.count > 1 ? "s" : ""})` : "New on Spawnswap"}
+              {g.rating?.count ? <><ScoreBadge avg={g.rating.avg} count={g.rating.count} size="xs" /> {g.rating.count} rating{g.rating.count > 1 ? "s" : ""}</> : "New on Spawnswap"}
               {g.genre && g.genre !== "All" && <> · {g.genre}</>}
             </p>
             <h1 className="mt-3 text-[36px] font-semibold leading-[1] tracking-[-0.04em] sm:text-[48px]">

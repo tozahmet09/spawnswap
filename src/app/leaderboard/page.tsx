@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Star } from "lucide-react";
-import { topDevs, topGames, topTesters, publicName } from "@/lib/community";
+import { topGames, topTesters, publicName } from "@/lib/community";
+import { MIN_RATINGS } from "@/lib/score";
+import { ScoreBadge } from "@/components/ScoreBadge";
 import { robloxAvatars } from "@/lib/avatars";
 import { GameIcon } from "@/components/GameIcon";
 import { CountUp } from "@/components/CountUp";
@@ -10,8 +11,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Leaderboards" };
 
 const TABS = [
-  { id: "games", label: "Top games", sub: "Games ranked by the minutes players spent in them." },
-  { id: "devs", label: "Top devs", sub: "Developers ranked by the minutes testers spent in their games." },
+  { id: "games", label: "Top games", sub: `Games ranked by score: what verified players rated them, out of 100. A game needs ${MIN_RATINGS} ratings to get a score.` },
   { id: "testers", label: "Top testers", sub: "Testers ranked by minutes played in other devs' games." },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
@@ -25,18 +25,13 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
   const info = TABS.find((t) => t.id === tab)!;
 
   let people: Person[] = [];
-  if (tab === "devs") {
-    people = (await topDevs(25)).map((d) => ({
-      id: d.user.id, name: publicName(d.user), robloxUserId: d.user.robloxVerified ? d.user.robloxUserId : null,
-      stat: "min played", minutes: d.minutes, extra: `${d.games} game${d.games === 1 ? "" : "s"}`,
-    }));
-  } else if (tab === "testers") {
+  if (tab === "testers") {
     people = (await topTesters(25)).map((p) => ({
       id: p.user.id, name: publicName(p.user), robloxUserId: p.user.robloxVerified ? p.user.robloxUserId : null,
       stat: "min", minutes: p.minutes, extra: `${p.plays} game${p.plays === 1 ? "" : "s"}`,
     }));
   }
-  const games = tab === "games" ? await topGames(25) : [];
+  const games = tab === "games" ? await topGames(50) : [];
 
   const ids = people.map((p) => p.robloxUserId);
   const [heads, bodies] = await Promise.all([robloxAvatars(ids.slice(3)), robloxAvatars(ids.slice(0, 3), "avatar")]);
@@ -71,19 +66,15 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
           {games.map((g, i) => (
             <li key={g.id} className="animate-rise-in" style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}>
               <Link href={`/games/${g.id}`} className="group flex items-center gap-4 py-3">
-                <Rank n={i + 1} />
+                {g.score != null ? <Rank n={i + 1} /> : <span className="w-9 shrink-0 text-center text-mute" aria-hidden>–</span>}
                 <GameIcon url={g.iconUrl} className="h-12 w-12 shrink-0 rounded-ctl" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-semibold group-hover:text-lime">{g.name}</div>
                   <div className="text-xs text-mute">
-                    {g.genre}
-                    {g.rating ? <span className="sm:hidden"> · ★ {g.rating.toFixed(1)}</span> : null}
+                    {g.genre} · {g.ratings} rating{g.ratings === 1 ? "" : "s"}
                   </div>
                 </div>
-                <span className="hidden w-20 items-center justify-end gap-1 text-sm tabular-nums text-mute sm:inline-flex" title={g.ratings ? `${g.ratings} rating${g.ratings === 1 ? "" : "s"}` : "No ratings yet"}>
-                  {g.rating ? <><Star className="h-3.5 w-3.5 fill-lime text-lime" /> {g.rating.toFixed(1)}</> : "–"}
-                </span>
-                <span className="w-24 text-right text-sm font-semibold tabular-nums"><CountUp value={g.minutes} /> min</span>
+                <ScoreBadge avg={g.rating} count={g.ratings} size="sm" />
               </Link>
             </li>
           ))}
