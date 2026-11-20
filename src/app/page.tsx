@@ -10,6 +10,7 @@ import { displayName, gameThumbnails } from "@/lib/thumbs";
 import { releaseLabel } from "@/lib/release";
 import { planBadge, planOf, planRank } from "@/lib/plans";
 import { gameRatings } from "@/lib/ratings";
+import { REQUIRED_SECONDS } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,26 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
     .sort((a, b) => planRank(b.owner) - planRank(a.owner) || Number(isVerifiedGame(b)) - Number(isVerifiedGame(a)))
     .map(toCard)
     .map((g) => ({ ...g, earns: true }));
+  // "Continue": games this player started and hasn't finished, plus finished plays still waiting for their rating (last 2 days).
+  const openTasks = user
+    ? await db.playTask.findMany({
+        where: {
+          playerId: user.id,
+          game: { hiddenAt: null },
+          OR: [
+            { status: { in: ["PENDING", "PLAYED"] } },
+            { status: "COMPLETED", rating: null, feedback: null, completedAt: { gt: new Date(now.getTime() - 48 * 3600e3) } },
+          ],
+        },
+        orderBy: { createdAt: "desc" },
+        take: 12,
+        include: { game: { include: withOwner } },
+      })
+    : [];
+  const going = openTasks.map((t) => ({
+    ...toCard(t.game),
+    progress: { seconds: t.playedSeconds, required: REQUIRED_SECONDS, done: t.status !== "PENDING", placeId: t.game.placeId },
+  }));
   const featuredRows = await db.game.findMany({ where: { featuredUntil: { gt: now }, hiddenAt: null }, take: 12, include: withOwner });
   const featured = featuredRows.map(toCard);
   featured.sort(() => Math.random() - 0.5); // a different featured game leads the hero on each visit
@@ -77,7 +98,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
     .map(toCard);
 
   // Wide Roblox screenshots for every card on the page (one cached call).
-  const all = [...featured, ...earn, ...fresh, ...soon];
+  const all = [...going, ...featured, ...earn, ...fresh, ...soon];
   const universe = new Map<string, string | null>();
   for (const r of [...featuredRows, ...(await db.game.findMany({ where: { id: { in: all.map((g) => g.id) } }, select: { id: true, universeId: true } }))]) universe.set(r.id, r.universeId);
   const thumbs = await gameThumbnails([...universe.values()]);
@@ -95,6 +116,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
   // Only the first card of each game gets a view-transition name (two elements with one name cancel the animation).
   const named = new Set<string>();
   const vt = (list: TrailerGame[]) => list.map((g) => (named.has(g.id) ? g : (named.add(g.id), { ...g, vt: true })));
+  const goingRow = vt(going);
   const earnRow = vt(earn);
   const freshRow = vt(fresh);
   const soonRow = vt(soon);
@@ -126,6 +148,17 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
           <span><span className="font-semibold text-cream">New Roblox games, before they blow up.</span> Developers play each other&apos;s games to get real players.</span>
           <Link href="/how-it-works" className="link">How it works <ArrowRight className="h-3.5 w-3.5" /></Link>
         </p>
+      )}
+
+      {goingRow.length > 0 && (
+        <section aria-labelledby="continue-title">
+          <Head id="continue-title" accent title="Continue" sub="Games you started. Finish 10 minutes to get the credit.">
+            <a href="/play/tasks" className="link-accent">See all <ArrowRight className="h-3.5 w-3.5" /></a>
+          </Head>
+          <Rail label="Continue playing">
+            {goingRow.map((g) => <TrailerCard key={g.id} game={g} />)}
+          </Rail>
+        </section>
       )}
 
       <section aria-labelledby="earn-title">

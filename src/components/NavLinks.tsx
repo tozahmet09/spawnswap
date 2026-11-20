@@ -5,11 +5,8 @@ import { usePathname } from "next/navigation";
 
 const LINKS: { href: string; label: string; short?: string; desktopOnly?: boolean }[] = [
   { href: "/", label: "Home", desktopOnly: true },
-  { href: "/play", label: "Progress" },
   { href: "/leaderboard", label: "Leaderboard", short: "Top" },
   { href: "/social", label: "Social media", short: "Social" },
-  { href: "/how-it-works", label: "How it works", desktopOnly: true },
-  { href: "/pricing", label: "Pricing", desktopOnly: true },
 ];
 
 /** Main nav: plain text links. The current page is bright with a thin amber line under it. */

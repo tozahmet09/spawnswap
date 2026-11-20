@@ -41,6 +41,8 @@ export type TrailerGame = {
   pitch?: string;
   /** Not out yet: "Out Nov 14 · in 6 days". Shown instead of the player count. */
   release?: string;
+  /** A play the user started and hasn't finished ("Continue" row): minutes so far, or done and waiting for a rating. */
+  progress?: { seconds: number; required: number; done: boolean; placeId: string };
   /** Gives the thumbnail a view-transition name so it grows into the game page. Only one card per game may have it. */
   vt?: boolean;
 };
@@ -217,6 +219,7 @@ export function TrailerCard({ game }: { game: TrailerGame }) {
             <Media game={game} active={active} />
           </div>
           {game.earns && <span className="absolute left-1.5 top-1.5 rounded-[6px] bg-lime px-1.5 py-0.5 font-mono text-[11px] font-medium text-navy">+1 credit</span>}
+          {game.progress && <ProgressStrip p={game.progress} />}
         </div>
         <div className="mt-2.5 flex gap-2.5">
           {game.rank && <span className="font-mono text-lg leading-none tabular-nums text-faint">{game.rank}</span>}
@@ -227,7 +230,13 @@ export function TrailerCard({ game }: { game: TrailerGame }) {
         </div>
       </a>
       <div className="mt-3">
-        {game.release ? (
+        {game.progress ? (
+          game.progress.done ? (
+            <a href="/play/tasks" className="btn min-h-[36px] w-full"><Ticket className="h-4 w-4" /> Rate · collect +1</a>
+          ) : (
+            <a href={`/play/tasks?started=${game.progress.placeId}`} className="btn min-h-[36px] w-full"><Play className="h-3.5 w-3.5 fill-current" /> Continue</a>
+          )
+        ) : game.release ? (
           <a href={page} className="btn-quiet min-h-[36px] w-full">Watch trailer</a>
         ) : game.earns ? (
           <form action={playGame}>
@@ -239,6 +248,22 @@ export function TrailerCard({ game }: { game: TrailerGame }) {
         )}
       </div>
     </div>
+  );
+}
+
+/** Minutes played so far as a lime bar along the bottom of the picture, with "4 / 10 min" in the corner. */
+function ProgressStrip({ p }: { p: NonNullable<TrailerGame["progress"]> }) {
+  const pct = p.done ? 100 : Math.min(100, Math.round((p.seconds / p.required) * 100));
+  const mins = Math.round(p.required / 60);
+  return (
+    <>
+      <span className="absolute right-1.5 top-1.5 rounded-[6px] bg-navy/80 px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums text-cream backdrop-blur">
+        {p.done ? "Done" : `${Math.floor(p.seconds / 60)} / ${mins} min`}
+      </span>
+      <span aria-hidden className="absolute inset-x-0 bottom-0 h-1 bg-black/50">
+        <span className="block h-full bg-lime shadow-[0_0_10px_rgba(200,240,49,.8)]" style={{ width: `${pct}%` }} />
+      </span>
+    </>
   );
 }
 
