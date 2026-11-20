@@ -8,7 +8,7 @@ import { requireUser } from "@/lib/auth";
 import { rateLimit } from "@/lib/ratelimit";
 import { sendEmail } from "@/lib/email";
 import {
-  ABOUT_MAX, INSTRUCTIONS_MAX, MESSAGE_MAX, POST_MAX, PLATFORMS, REQUESTS_PER_DAY,
+  ABOUT_MAX, INSTRUCTIONS_MAX, MESSAGE_MAX, MIN_FOLLOWERS, PLATFORMS, REQUESTS_PER_DAY,
   creatorUrl, isPlatform, parseCreatorHandle,
 } from "@/lib/creators";
 import type { FormState } from "@/app/actions";
@@ -34,20 +34,9 @@ async function notify(to: string, subject: string, lines: string[], button: { la
   await sendEmail(to, subject, text, html);
 }
 
-// ---------- role ----------
-
-/** Switches what the account is for. Creators land on the Social media tab, devs on My Games. */
-export async function setRole(f: FormData) {
-  const user = await requireUser();
-  const role = str(f, "role") === "CREATOR" ? "CREATOR" : "DEV";
-  await db.user.update({ where: { id: user.id }, data: { role } });
-  revalidatePath("/", "layout");
-  redirect(role === "CREATOR" ? "/social/profile" : "/dashboard");
-}
-
 // ---------- profiles ----------
 
-/** Creates or updates the creator's card on the Social media tab. Only adults are listed, because devs pay them. */
+/** Creates or updates the creator's listing on the Social media tab. Any account can have one (devs can be creators too). Only adults are listed, because devs pay them. */
 export async function saveCreatorProfile(_: FormState, f: FormData): Promise<FormState> {
   const user = await requireUser();
   const platform = str(f, "platform");
@@ -56,6 +45,7 @@ export async function saveCreatorProfile(_: FormState, f: FormData): Promise<For
   if (!handle) return { error: `Enter your ${PLATFORMS[platform]} username, like @yourname.` };
   const followers = Number(str(f, "followers").replace(/[,\s]/g, ""));
   if (!Number.isInteger(followers) || followers < 0 || followers > 1e9) return { error: "Enter your follower count as a number." };
+  if (followers < MIN_FOLLOWERS) return { error: `You need at least ${MIN_FOLLOWERS.toLocaleString("en-US")} followers to post a listing.` };
   const priceRaw = str(f, "price").replace(/^\$/, "");
   const priceUsd = priceRaw === "" ? null : Number(priceRaw);
   if (priceUsd !== null && (!Number.isInteger(priceUsd) || priceUsd < 0 || priceUsd > 100000))
@@ -71,55 +61,16 @@ export async function saveCreatorProfile(_: FormState, f: FormData): Promise<For
     update: data,
   });
   revalidatePath("/social");
-  return { ok: data.hidden ? "Saved. Your card is hidden from the list." : "Saved. Devs can see your card now." };
-}
-
-/** A dev's post on the Social media tab: what kind of video they're looking for. Empty text takes the post down. */
-export async function saveDevPost(_: FormState, f: FormData): Promise<FormState> {
-  const user = await requireUser();
-  const post = str(f, "post");
-  if (post.length > POST_MAX) return { error: `Keep it under ${POST_MAX} characters.` };
-  if (post && post.length < 10) return { error: "Write a bit more, like what game and what kind of video." };
-  if (post && !(await db.game.count({ where: { ownerId: user.id, hiddenAt: null } })))
-    return { error: "Add a game first, so creators know what they would show." };
-  await db.user.update({ where: { id: user.id }, data: post ? { devPost: post, devPostAt: user.devPost ? user.devPostAt : new Date() } : { devPost: null, devPostAt: null } });
-  revalidatePath("/social");
-  return { ok: post ? "Posted. Creators can see it and offer a video." : "Post removed." };
+  return { ok: data.hidden ? "Saved. Your listing is hidden." : "Saved. Devs can see your listing now." };
 }
 
 // ---------- requests ----------
-
-/** A creator offers to make a video for a dev. The dev accepts by picking the game and writing instructions. */
-export async function offerVideo(_: FormState, f: FormData): Promise<FormState> {
-  const user = await requireUser();
-  const me = await db.creatorProfile.findUnique({ where: { userId: user.id } });
-  if (!me) return { error: "Make your creator card first." };
-  if (me.hidden) return { error: "Your creator card is hidden. Show it first, so the dev can see who you are." };
-  const dev = await db.user.findUnique({ where: { id: str(f, "devId") }, select: { id: true, email: true, displayName: true } });
-  if (!dev || dev.id === user.id) return { error: "That developer wasn't found." };
-  const message = str(f, "message");
-  if (message.length < 5) return { error: "Write a short message." };
-  if (message.length > MESSAGE_MAX) return { error: `Keep it under ${MESSAGE_MAX} characters.` };
-  if (await db.videoRequest.count({ where: { creatorId: me.id, devId: dev.id, status: "PENDING" } }))
-    return { error: "You already have a request waiting with this developer." };
-  if (!(await rateLimit(`video-req:${user.id}`, REQUESTS_PER_DAY, 24 * 3600e3))) return { error: TOO_MANY };
-  await db.videoRequest.create({ data: { creatorId: me.id, devId: dev.id, fromRole: "CREATOR", message } });
-  const url = await siteUrl();
-  await notify(
-    dev.email,
-    `@${me.handle} wants to make a video about your game`,
-    [`Hi ${dev.displayName},`, `@${me.handle} (${PLATFORMS[me.platform as keyof typeof PLATFORMS]}) wants to make a video about your game on Spawnswap:`, `"${message}"`, "Open your requests to accept and pick which game they should show, with your own instructions."],
-    { label: "See the request", href: `${url}/social/requests` },
-  );
-  revalidatePath("/social/requests");
-  return { ok: "Sent. You'll get an email when the developer answers." };
-}
 
 /** A dev asks a creator for a video, with the game and instructions filled in. The creator accepts or declines. */
 export async function askForVideo(_: FormState, f: FormData): Promise<FormState> {
   const user = await requireUser();
   const creator = await db.creatorProfile.findUnique({ where: { id: str(f, "creatorId") }, include: { user: { select: { email: true } } } });
-  if (!creator || creator.hidden || creator.userId === user.id) return { error: "That creator wasn't found." };
+  if (!creator || creator.hidden || creator.followers < MIN_FOLLOWERS || creator.userId === user.id) return { error: "That creator wasn't found." };
   const game = await db.game.findFirst({ where: { id: str(f, "gameId"), ownerId: user.id }, select: { id: true, name: true } });
   if (!game) return { error: "Pick one of your games." };
   const instructions = str(f, "instructions");
@@ -144,7 +95,7 @@ export async function askForVideo(_: FormState, f: FormData): Promise<FormState>
   return { ok: "Sent. You'll get an email when the creator answers." };
 }
 
-/** Accept or decline a request sent to you. A dev accepting a creator's offer picks the game and writes instructions. */
+/** Accept or decline a request sent to you. Older creator offers (fromRole CREATOR) are still answered by the dev, who picks the game. */
 export async function answerRequest(_: FormState, f: FormData): Promise<FormState> {
   const user = await requireUser();
   const req = await db.videoRequest.findUnique({

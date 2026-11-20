@@ -48,8 +48,8 @@ export async function signup(_: FormState, f: FormData): Promise<FormState> {
     data: { email, displayName, passwordHash, credits, referredById: inviter?.id ?? null, welcomeBonusPaid: false, role },
   });
   await createSession(user.id);
-  // Creators start by making their card on the Social media tab. Welcome credits are for games, so they
-  // wait until the account switches to developer (the dashboard pays them then).
+  // Creators start by posting their listing on the Social media tab. Welcome credits are for games, so they
+  // are paid the first time the account opens My Games (any account can be a dev and a creator).
   if (role === "CREATOR") redirect("/social/profile?new=1");
   // Welcome credits right away; the dashboard plays the welcome moment for them.
   const welcome = await payWelcomeBonus(user.id);
@@ -171,7 +171,7 @@ export async function deleteAccount(_: FormState, f: FormData): Promise<FormStat
     // Unfinished plays free their slot for someone else; finished ones lose the review text and Roblox id.
     await tx.playTask.deleteMany({ where: { playerId: user.id, status: { not: "COMPLETED" } } });
     await tx.playTask.updateMany({ where: { playerId: user.id }, data: { feedback: null, robloxUserId: "deleted" } });
-    // Social media: their creator card (and requests with it), requests they sent as a dev, and their post.
+    // Social media: their creator listing (and requests with it) and requests they sent as a dev.
     await tx.creatorProfile.deleteMany({ where: { userId: user.id } });
     await tx.videoRequest.deleteMany({ where: { devId: user.id } });
     await tx.game.deleteMany({ where: { ownerId: user.id } }); // also removes their campaigns, plays, visits, likes and comments
