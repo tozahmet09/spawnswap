@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PLANS } from "@/lib/plans";
+import { CREDITS_ON, VIDEOS_PER_WEEK } from "@/lib/flow";
 import { EARLY_BIRD_ACCOUNTS, EARLY_BIRD_CREDITS, MAX_OPEN_TASKS, REFERRAL_CREDITS, REQUIRED_SECONDS, TASK_TTL_HOURS, fmt } from "@/lib/money";
 
 export const metadata: Metadata = {
   title: "How it works",
-  description: "How Spawnswap works: play other developers' Roblox games to earn credits, spend credits to get real players for your own game.",
+  description: CREDITS_ON
+    ? "How Spawnswap works: play other developers' Roblox games to earn credits, spend credits to get real players for your own game."
+    : "How Spawnswap works: add your Roblox game, and we play it in our TikTok series and show it to real players. Free.",
 };
 
 const minutes = Math.round(REQUIRED_SECONDS / 60);
@@ -32,6 +35,7 @@ function Qa({ q, children }: { q: string; children: React.ReactNode }) {
 }
 
 export default function HowItWorks() {
+  if (!CREDITS_ON) return <Simple />;
   return (
     <article className="mx-auto max-w-3xl space-y-14">
       <header>
@@ -148,6 +152,57 @@ export default function HowItWorks() {
       <section className="flex flex-wrap items-center gap-3">
         <Link href="/signup" className="btn">Get players</Link>
         <Link href="/#earn-title" className="btn-quiet">Play &amp; earn</Link>
+      </section>
+    </article>
+  );
+}
+
+/** The add-your-game flow: sign up, add the game, we play it on TikTok. */
+function Simple() {
+  return (
+    <article className="mx-auto max-w-3xl space-y-14">
+      <header>
+        <p className="eyebrow">How it works</p>
+        <h1 className="mt-2 text-[32px] font-bold leading-[1.08] sm:text-[42px]">
+          Add your game. <span className="text-lime">We play it on TikTok.</span>
+        </h1>
+        <p className="mt-3 max-w-2xl text-mute">
+          New Roblox games are hard to find. We test them in our TikTok series so real players see them. It&apos;s free.
+        </p>
+      </header>
+
+      <section>
+        <ol className="space-y-6">
+          <Step n={1} title="Sign up">Free, with your email.</Step>
+          <Step n={2} title="Add your game">
+            Paste your Roblox link. Add your TikTok username so we can tag you. A short trailer helps, but it&apos;s optional.
+          </Step>
+          <Step n={3} title="We play it on TikTok">
+            We play about {VIDEOS_PER_WEEK} games a week, in the order they were added. My Games shows your place in line.
+            When your video is out, your game gets a <span className="text-cream">Tested in our series</span> badge and a link to the video.
+          </Step>
+        </ol>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-bold">Questions</h2>
+        <div className="mt-2 divide-y divide-line border-y border-line">
+          <Qa q="Is it free?">Yes. Adding your game and getting it in the video line costs nothing.</Qa>
+          <Qa q="How long do I wait?">
+            We play about {VIDEOS_PER_WEEK} games a week, oldest first. Your place in line is on My Games and moves up every time we post.
+          </Qa>
+          <Qa q="Do I have to play other people's games?">No. You can if you like, every game on the homepage has a Play button, but it&apos;s never required.</Qa>
+          <Qa q="How many views will my video get?">We can&apos;t promise a number. We play your game honestly and tag you so players can find it.</Qa>
+          <Qa q="Is any game skipped?">
+            Games that break Roblox&apos;s rules or aren&apos;t OK for a young audience. We&apos;ll let you know if that happens.
+          </Qa>
+          <Qa q="Is this made by Roblox?">No. Spawnswap is independent and not affiliated with Roblox Corporation.</Qa>
+        </div>
+      </section>
+
+      <section className="flex flex-wrap items-center gap-3">
+        <Link href="/signup" className="btn">Add your game</Link>
+        <Link href="/" className="btn-quiet">See the games</Link>
       </section>
     </article>
   );

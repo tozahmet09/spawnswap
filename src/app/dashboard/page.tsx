@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { BadgeCheck, ChevronRight, Gift, Plus, Link2 } from "lucide-react";
+import { BadgeCheck, ChevronRight, Clapperboard, Gift, Plus, Link2 } from "lucide-react";
+import { CREDITS_ON, VIDEOS_PER_WEEK } from "@/lib/flow";
+import { queuePositions } from "@/lib/videoQueue";
+import { VideoStatus } from "@/components/VideoStatus";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/admin";
@@ -19,7 +22,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const { reset, deleted, welcome } = await searchParams;
   const user = await requireUser();
   // Signed up before welcome credits moved to signup and never added a game: pay now, then show the moment.
-  if (!user.welcomeBonusPaid && (await payWelcomeBonus(user.id))) redirect("/dashboard?welcome=1");
+  if (CREDITS_ON && !user.welcomeBonusPaid && (await payWelcomeBonus(user.id))) redirect("/dashboard?welcome=1");
   const games = await db.game.findMany({
     where: { ownerId: user.id },
     orderBy: { createdAt: "desc" },
@@ -29,6 +32,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     },
   });
   const alive = Date.now() - SCRIPT_ALIVE_MS;
+  const line = await queuePositions();
   const code = await ensureReferralCode(user.id);
   const h = await headers();
   const appUrl = process.env.APP_URL || `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
@@ -51,9 +55,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <Link href="/dashboard/games/new" className="btn"><Plus className="h-4 w-4" /> Add game</Link>
       </div>
 
-      {welcome && user.welcomeBonusPaid && <WelcomeMoment credits={EARLY_BIRD_CREDITS} />}
+      {CREDITS_ON && welcome && user.welcomeBonusPaid && <WelcomeMoment credits={EARLY_BIRD_CREDITS} />}
 
-      {!user.robloxVerified && (
+      {CREDITS_ON && !user.robloxVerified && (
         <Link href="/dashboard/roblox" className="flex items-center gap-3 rounded-ctl border border-line px-4 py-3 text-sm hover:border-mute">
           <Link2 className="h-4 w-4 text-lime" />
           <span className="flex-1">Link your Roblox account to earn free credits by playing.</span>
@@ -80,7 +84,20 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </Link>
       )}
 
-      {games.length === 0 && user.credits > 0 ? (
+      {games.length === 0 && !CREDITS_ON ? (
+        // Right after signup: the one thing to do is add the game.
+        <section className="border-y border-line py-12 text-center sm:py-16">
+          <Clapperboard className="mx-auto h-8 w-8 text-lime drop-shadow-[0_0_14px_rgba(200,240,49,.55)]" aria-hidden />
+          <h2 className="mx-auto mt-4 max-w-md font-display text-[28px] font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[34px]">
+            Add your game. <span className="text-lime">We play it on TikTok.</span>
+          </h2>
+          <p className="mx-auto mt-3 max-w-sm text-sm text-mute">
+            It goes into our video line right away. We play about {VIDEOS_PER_WEEK} games a week, in order.
+          </p>
+          <Link href="/dashboard/games/new" className="btn mt-6"><Plus className="h-4 w-4" /> Add my game</Link>
+          <p className="mt-3 text-xs text-faint">Takes about a minute. Just paste the Roblox link.</p>
+        </section>
+      ) : games.length === 0 && user.credits > 0 ? (
         // Right after signup: the credits are in, the one thing to do next is give them a game.
         <section className="border-y border-line py-12 text-center sm:py-16">
           <Gift className="mx-auto h-8 w-8 text-lime drop-shadow-[0_0_14px_rgba(200,240,49,.55)]" aria-hidden />
@@ -110,15 +127,15 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                   <div className="min-w-0 flex-1 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="truncate font-semibold group-hover:text-lime">{g.name}</span>
-                      {live && (
+                      {CREDITS_ON && live && (
                         <span className="inline-flex items-center gap-1 text-xs text-cream">
                           <BadgeCheck className="h-3 w-3" /> Verified
                         </span>
                       )}
                       {g.hiddenAt && <span className="text-xs text-faint">Archived</span>}
-                      {coming > 0 && !g.hiddenAt && <span className="text-xs text-mute">{coming} on the way</span>}
+                      {CREDITS_ON && coming > 0 && !g.hiddenAt && <span className="text-xs text-mute">{coming} on the way</span>}
                     </div>
-                    <GoalBar count={g._count.tasks} compact />
+                    {CREDITS_ON ? <GoalBar count={g._count.tasks} compact /> : <VideoStatus tested={!!g.seriesTestedAt} place={line.get(g.id)} archived={!!g.hiddenAt} />}
                   </div>
                   <ChevronRight className="h-5 w-5 shrink-0 text-mute group-hover:text-cream" />
                 </Link>
@@ -127,7 +144,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           })}
         </ul>
       )}
-      <section className="rule space-y-3 pt-8">
+      {CREDITS_ON && <section className="rule space-y-3 pt-8">
         <div className="flex items-center gap-2">
           <Gift className="h-5 w-5 text-lime" />
           <h2 className="text-lg font-bold">Invite a dev friend</h2>
@@ -140,7 +157,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <CopyButton text={invite} label="Copy link" />
         </div>
         {invited > 0 && <p className="text-sm text-mute tabular-nums">{invited} joined, {invitedPaid} paid out.</p>}
-      </section>
+      </section>}
 
       <p className="text-sm">
         <Link href="/dashboard/account" className="text-mute underline hover:text-cream">Account settings</Link>

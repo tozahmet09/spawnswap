@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CREDITS_ON, PLAN_SALES_ON } from "@/lib/flow";
 import { ArrowRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
@@ -58,12 +59,14 @@ export default async function Billing({ searchParams }: { searchParams: Promise<
         <h1 className="mt-1 page-title">{plan.name} plan</h1>
         {planNotice && <p role="status" className="mt-3 text-sm text-verified">{planNotice}</p>}
         {q.sub_session && !justSubscribed && plan.id === "FREE" && <p className="mt-3 text-sm text-mute">Payment is processing. Your plan turns on as soon as Stripe confirms it.</p>}
-        {(q.payments === "off" || mode === "off") && <p className="mt-3 text-sm text-mute">Paid plans aren&apos;t open yet.</p>}
+        {(q.payments === "off" || mode === "off") && PLAN_SALES_ON && <p className="mt-3 text-sm text-mute">Paid plans aren&apos;t open yet.</p>}
         {q.portal === "off" && <p className="mt-3 text-sm text-mute">The billing page isn&apos;t available right now. Contact us and we&apos;ll help.</p>}
         {mode === "test" && <p className="mt-3 text-xs text-mute">Test mode: plans are free and instant.</p>}
         {mode === "stripe" && stripeTestKey && <p className="mt-3 text-xs text-mute">Stripe test mode: pay with card 4242 4242 4242 4242, any future date, any CVC.</p>}
 
-        {plan.id === "FREE" ? (
+        {plan.id === "FREE" && !PLAN_SALES_ON ? (
+          <p className="mt-4 max-w-prose text-mute">Spawnswap is free. There are no paid plans right now.</p>
+        ) : plan.id === "FREE" ? (
           <div className="mt-4 space-y-4">
             <p className="max-w-prose text-mute">You&apos;re on Free: up to {plan.maxGames} games, players from the credits you earn. Pro and Max put your games first and add homepage spotlight days every month.</p>
             <Link href="/pricing" className="btn">See plans <ArrowRight className="h-4 w-4" /></Link>
@@ -78,7 +81,7 @@ export default async function Billing({ searchParams }: { searchParams: Promise<
             {user.planStatus === "past_due" && <p className="text-sm text-danger">Your last payment didn&apos;t go through. Update your card to keep your plan.</p>}
             <p className="max-w-prose text-sm text-mute">Use spotlight days on a game&apos;s page under &ldquo;Spotlight on the homepage&rdquo;.</p>
             <div className="flex flex-wrap gap-3">
-              <Link href="/pricing" className="btn-quiet">Change plan</Link>
+              {PLAN_SALES_ON && <Link href="/pricing" className="btn-quiet">Change plan</Link>}
               {user.stripeCustomerId && (
                 <form action="/api/subscribe" method="post">
                   <input type="hidden" name="action" value="portal" />
@@ -94,7 +97,7 @@ export default async function Billing({ searchParams }: { searchParams: Promise<
         )}
       </section>
 
-      <section>
+      {CREDITS_ON && <section>
         <h2 className="text-lg font-bold">Credits</h2>
         <p className="mt-1 text-mute">You have <b className="text-cream tabular-nums">{user.credits}</b>. 1 credit = 1 real player for your game.</p>
         <p className="mt-1 text-sm text-mute">Earn them by playing other games for 10 minutes. <Link href="/#earn-title" className="text-lime underline-offset-4 hover:underline">Play &amp; earn</Link></p>
@@ -117,7 +120,7 @@ export default async function Billing({ searchParams }: { searchParams: Promise<
             ))}
           </form>
         )}
-      </section>
+      </section>}
 
       {payments.length > 0 && (
         <section>

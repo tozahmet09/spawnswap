@@ -7,6 +7,8 @@ import "./globals.css";
 import { getUser } from "@/lib/auth";
 import { CreditCounter } from "@/components/CreditCounter";
 import { WelcomeBar } from "@/components/WelcomeBar";
+import { CREDITS_ON, PLAN_SALES_ON } from "@/lib/flow";
+import { planOf } from "@/lib/plans";
 import { db } from "@/lib/db";
 import { isAdminEmail } from "@/lib/admin";
 import { Particles } from "@/components/Particles";
@@ -22,16 +24,16 @@ const display = Outfit({ subsets: ["latin"], weight: ["600", "700", "800", "900"
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL || "https://spawnswap.com"),
-  title: { default: "Spawnswap: new Roblox games, before they blow up", template: "%s · Spawnswap" },
-  description: "Watch trailers of brand-new Roblox games. Developers: get your first 100 real players, verified in-game.",
+  title: { default: "Spawnswap: add your Roblox game, we play it on TikTok", template: "%s · Spawnswap" },
+  description: "Add your Roblox game. We play it and show it to players on TikTok. Free.",
   twitter: { card: "summary_large_image" },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getUser();
-  // Signed up but no game yet: remind them on every page that their credits are waiting for a game.
+  // Signed up but no game yet: remind them on every page that adding it is the one step.
   const admin = isAdminEmail(user?.email);
-  const noGameYet = !!user && user.credits > 0 && (await db.game.count({ where: { ownerId: user.id } })) === 0;
+  const noGameYet = !!user && (await db.game.count({ where: { ownerId: user.id } })) === 0;
   return (
     <html lang="en" className={`${body.variable} ${mono.variable} ${display.variable}`}>
       <body>
@@ -50,7 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               {user ? (
                 <>
                   <Link href="/dashboard" className="hidden min-h-[40px] items-center px-2 text-mute transition hover:text-cream md:flex">My Games</Link>
-                  <CreditCounter value={user.credits} />
+                  {CREDITS_ON && <CreditCounter value={user.credits} />}
                   <details className="group relative">
                     <summary className="flex min-h-[40px] cursor-pointer list-none items-center gap-1 rounded-full pl-1 pr-1.5 [&::-webkit-details-marker]:hidden" aria-label="Account menu">
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-line text-sm font-semibold text-cream">
@@ -62,12 +64,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                       <Link href="/dashboard" className="block px-4 py-2.5 hover:bg-line">My Games</Link>
                       <Link href="/social/profile" className="block px-4 py-2.5 hover:bg-line">My creator listing</Link>
                       <Link href="/social/requests" className="block px-4 py-2.5 hover:bg-line">Video requests</Link>
-                      <Link href="/dashboard/billing" className="block px-4 py-2.5 hover:bg-line">Plan &amp; billing</Link>
+                      {(PLAN_SALES_ON || planOf(user).id !== "FREE") && <Link href="/dashboard/billing" className="block px-4 py-2.5 hover:bg-line">Plan &amp; billing</Link>}
                       <Link href="/dashboard/account" className="block px-4 py-2.5 hover:bg-line">Account</Link>
                       <div className="border-t border-line pt-1">
-                        <Link href="/play/tasks" className="block px-4 py-2.5 hover:bg-line">My progress</Link>
+                        {CREDITS_ON && <Link href="/play/tasks" className="block px-4 py-2.5 hover:bg-line">My progress</Link>}
                         <Link href="/how-it-works" className="block px-4 py-2.5 hover:bg-line">How it works</Link>
-                        <Link href="/pricing" className="block px-4 py-2.5 hover:bg-line">Pricing</Link>
+                        {PLAN_SALES_ON && <Link href="/pricing" className="block px-4 py-2.5 hover:bg-line">Pricing</Link>}
                       </div>
                       {admin && (
                         <div className="border-t border-line pt-1">
@@ -86,12 +88,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               ) : (
                 <>
                   <Link href="/login" className="min-h-[40px] whitespace-nowrap px-2 leading-[40px] text-mute transition hover:text-cream sm:px-3">Log In</Link>
-                  <Link href="/signup" className="btn whitespace-nowrap px-3 sm:px-4"><span className="min-[480px]:hidden">Join</span><span className="hidden min-[480px]:inline">Get players</span></Link>
+                  <Link href="/signup" className="btn whitespace-nowrap px-3 sm:px-4"><span className="min-[480px]:hidden">Join</span><span className="hidden min-[480px]:inline">Add your game</span></Link>
                 </>
               )}
             </div>
           </nav>
-          {user && noGameYet && <WelcomeBar credits={user.credits} />}
+          {user && noGameYet && <WelcomeBar />}
         </header>
         <main className="relative z-10 mx-auto max-w-6xl px-4 py-8 sm:py-12">{children}</main>
         <footer className="relative z-10 bg-navy-deep text-faint">
@@ -99,7 +101,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <span>© {new Date().getFullYear()} Spawnswap. Not affiliated with Roblox Corporation.</span>
             <span className="hidden h-3 w-px bg-line sm:block" aria-hidden />
             <Link href="/how-it-works" className="transition hover:text-cream">How It Works</Link>
-            <Link href="/pricing" className="transition hover:text-cream">Pricing</Link>
+            {PLAN_SALES_ON && <Link href="/pricing" className="transition hover:text-cream">Pricing</Link>}
             <Link href="/guides" className="transition hover:text-cream">Guides</Link>
             <Link href="/terms" className="transition hover:text-cream">Terms</Link>
             <Link href="/privacy" className="transition hover:text-cream">Privacy</Link>

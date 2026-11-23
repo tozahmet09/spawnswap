@@ -16,6 +16,9 @@ import { DeleteGameButton } from "@/components/DeleteGameButton";
 import { cancelCampaign, createCampaign, refreshGame, setGameHidden, setReleaseDate, setWantsVideo, spendSpotlightDays, toggleCampaign } from "@/app/actions";
 import { FEATURED_SALES_ON, planOf } from "@/lib/plans";
 import { isUpcoming, releaseLabel } from "@/lib/release";
+import { CREDITS_ON, PLAN_SALES_ON, VIDEOS_PER_WEEK } from "@/lib/flow";
+import { queuePositions } from "@/lib/videoQueue";
+import { VideoStatus } from "@/components/VideoStatus";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +78,10 @@ export default async function GamePage({
   const running = game.campaigns.filter((c) => ["ACTIVE", "PAUSED"].includes(c.status));
   const plan = planOf(user);
   const stats = plan.stats ? await detailedStats(game.id) : null;
+  const place = (await queuePositions()).get(game.id);
+  // Steps are numbered in the order they show, since some are hidden while credits and plan sales are off.
+  let stepNo = 0;
+  const next = () => ++stepNo;
 
   return (
     <div className="space-y-8">
@@ -85,7 +92,7 @@ export default async function GamePage({
             <h1 className="truncate page-title">{game.name}</h1>
             {featured && <span className="text-xs text-mute">Featured until {game.featuredUntil!.toISOString().slice(5, 10)}</span>}
           </div>
-          <GoalBar count={game.tasks.length} />
+          {CREDITS_ON ? <GoalBar count={game.tasks.length} /> : <VideoStatus tested={!!game.seriesTestedAt} videoUrl={game.seriesVideoUrl} place={place} archived={!!game.hiddenAt} />}
           <p className="flex flex-wrap gap-x-4 text-xs text-mute">
             {avg && <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-lime text-lime" /> {avg} avg</span>}
             <span>{visits7d} visits from Spawnswap this week</span>
@@ -110,8 +117,27 @@ export default async function GamePage({
       {notice === "off" && <p className="text-sm text-mute">Spotlight purchases aren&apos;t open yet.</p>}
 
       <ol className="divide-y divide-line border-y border-line">
-        <Step n={1} title="Add a trailer" done={!!game.trailerUrl}>
-          <p className="text-sm text-mute">Games with a trailer show first. 10 to 30 seconds of gameplay. Every trailer is checked to keep the site safe for kids.</p>
+        {!CREDITS_ON && (
+          <Step n={next()} title="Your TikTok video" done={!!game.seriesTestedAt}>
+            {game.seriesTestedAt ? (
+              <p className="max-w-prose text-sm text-mute">Your game has the <span className="text-cream">Tested in our series</span> badge on Spawnswap.</p>
+            ) : (
+              <>
+                <p className="max-w-prose text-sm text-mute">
+                  We play about {VIDEOS_PER_WEEK} games a week in our TikTok series, in the order they were added. {place ? <>Your game is <b className="text-cream tabular-nums">#{place}</b> in line and moves up as we go.</> : "Unarchive your game to get back in line."}
+                </p>
+                <Form action={setWantsVideo} submit="Save" className="flex flex-wrap items-start gap-3" buttonClass="btn-quiet">
+                  <input type="hidden" name="gameId" value={game.id} />
+                  <input type="hidden" name="on" value="1" />
+                  <input name="tiktok" aria-label="Your TikTok username (optional)" maxLength={60} placeholder="TikTok @username (optional)" autoComplete="off" defaultValue={game.tiktokHandle ? `@${game.tiktokHandle}` : ""} className="input w-64" />
+                </Form>
+                <p className="text-xs text-mute">Add your TikTok so we can tag you in the video.</p>
+              </>
+            )}
+          </Step>
+        )}
+        <Step n={next()} title="Add a trailer" done={!!game.trailerUrl} optional={!CREDITS_ON}>
+          <p className="text-sm text-mute">{CREDITS_ON ? "Games with a trailer show first." : "Helps us show your game well in the video, and games with a trailer show first on Spawnswap."} 10 to 30 seconds of gameplay. Every trailer is checked to keep the site safe for kids.</p>
           <TrailerUpload
             gameId={game.id}
             current={game.trailerUrl}
@@ -121,7 +147,7 @@ export default async function GamePage({
           />
         </Step>
 
-        <Step n={2} title="Release date" done={upcoming} optional>
+        <Step n={next()} title="Release date" done={upcoming} optional>
           <p className="max-w-prose text-sm text-mute">Not out yet? Set the day it launches. Until then it shows under <span className="text-cream">Coming soon</span> on the homepage, then moves to All games by itself.</p>
           {upcoming && <p className="text-sm text-cream">{releaseLabel(game.releaseAt!)}</p>}
           <div className="flex flex-wrap items-start gap-3">
@@ -138,7 +164,7 @@ export default async function GamePage({
           </div>
         </Step>
 
-        <Step n={3} title="Get players" done={running.length > 0 || game.tasks.length > 0}>
+        {CREDITS_ON && <Step n={next()} title="Get players" done={running.length > 0 || game.tasks.length > 0}>
           <p className="text-sm text-mute">1 credit = 1 verified player. You have {user.credits}. Unused credits come back if you stop.</p>
           <Form action={createCampaign} submit="Start" className="flex flex-wrap items-start gap-3" buttonClass="btn">
             <input type="hidden" name="gameId" value={game.id} />
@@ -170,9 +196,9 @@ export default async function GamePage({
               ))}
             </ul>
           )}
-        </Step>
+        </Step>}
 
-        <Step n={4} title="Get the Verified badge" done={live} optional>
+        {CREDITS_ON && <Step n={next()} title="Get the Verified badge" done={live} optional>
           <p className="max-w-prose text-sm text-mute">
             Players already count without this: we check on Roblox that they&apos;re in a game for 10 minutes. The tracker confirms they were in <b className="text-cream">your</b> game, gives you a{" "}
             <span className="inline-flex items-center gap-1 text-cream"><BadgeCheck className="h-3.5 w-3.5" /> Verified</span> badge and puts you first in the player queue.
@@ -192,9 +218,9 @@ export default async function GamePage({
               {live ? `Live, last ping ${game.scriptLastSeen!.toISOString().slice(11, 16)} UTC` : "Not installed"}
             </span>
           </div>
-        </Step>
+        </Step>}
 
-        <Step n={5} title="Spotlight on the homepage" done={featured} optional>
+        {(PLAN_SALES_ON || plan.id !== "FREE") && <Step n={next()} title="Spotlight on the homepage" done={featured} optional>
           {(needTrailer || !game.trailerUrl) && <p className="text-sm text-lime">Needs a trailer first (step 1).</p>}
           {plan.id !== "FREE" ? (
             <div className="space-y-2">
@@ -229,9 +255,9 @@ export default async function GamePage({
             ))}
           </form>
           )}
-        </Step>
+        </Step>}
 
-        <Step n={6} title="Want a video?" done={!!game.wantsVideoAt || !!game.seriesTestedAt} optional>
+        {CREDITS_ON && <Step n={next()} title="Want a video?" done={!!game.wantsVideoAt || !!game.seriesTestedAt} optional>
           {game.seriesTestedAt ? (
             <p className="max-w-prose text-sm text-mute">
               Your game was played in our TikTok series. It has the <span className="text-cream">Tested in our series</span> badge.
@@ -259,10 +285,10 @@ export default async function GamePage({
               <p className="text-xs text-mute">Add your TikTok so we can tag you in the video.</p>
             </>
           )}
-        </Step>
+        </Step>}
       </ol>
 
-      <section className="space-y-4">
+      {(stats || PLAN_SALES_ON) && <section className="space-y-4">
         <h2 className="text-xl font-bold">Stats</h2>
         {stats ? (
           <div className="space-y-6">
@@ -302,9 +328,9 @@ export default async function GamePage({
             <Link href="/pricing" className="text-lime underline-offset-4 hover:underline">See plans</Link>
           </p>
         )}
-      </section>
+      </section>}
 
-      <section className="space-y-4">
+      {(CREDITS_ON || game.tasks.length > 0) && <section className="space-y-4">
         <h2 className="text-xl font-bold">Players</h2>
         {game.tasks.length === 0 ? (
           <p className="text-sm text-mute">Players who played 10+ minutes show up here, with their rating if they left one.</p>
@@ -335,7 +361,7 @@ export default async function GamePage({
             ))}
           </ul>
         )}
-      </section>
+      </section>}
 
       <section id="visibility" className="scroll-mt-24 space-y-3 border-t border-line pt-8">
         <h2 className="text-xl font-bold">{game.hiddenAt ? "Archived" : "Archive this game"}</h2>
@@ -347,7 +373,7 @@ export default async function GamePage({
           </p>
         ) : (
           <p className="max-w-prose text-sm text-mute">
-            Takes the game off the homepage, the leaderboard and the player queue. Running campaigns pause and keep their credits.
+            {CREDITS_ON ? "Takes the game off the homepage, the leaderboard and the player queue. Running campaigns pause and keep their credits." : "Takes the game off the homepage, the leaderboard and the TikTok video line."}{" "}
             Nothing is deleted: reviews and stats stay, and you can unarchive it any time.
             {featured && " The spotlight time you paid for keeps running while it's archived."}
           </p>
@@ -365,7 +391,7 @@ export default async function GamePage({
         <h2 className="text-xl font-bold">Delete this game</h2>
         <p className="max-w-prose text-sm text-mute">
           Removes the game from SpawnSwap for good: its page, reviews and stats. Your Roblox game is not touched.
-          Credits still reserved in campaigns come back to you.
+          {CREDITS_ON && "Credits still reserved in campaigns come back to you."}
           {featured && " Spotlight time you paid for is lost."}
         </p>
         <DeleteGameButton gameId={game.id} name={game.name} />

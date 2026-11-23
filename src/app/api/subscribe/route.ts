@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getUser } from "@/lib/auth";
 import { paymentsMode, stripe } from "@/lib/payments";
 import { PLANS, planOf, type PlanId } from "@/lib/plans";
+import { PLAN_SALES_ON } from "@/lib/flow";
 import { priceIdFor, syncSubscription } from "@/lib/subscriptions";
 
 export const runtime = "nodejs";
@@ -32,6 +33,8 @@ async function handle(req: NextRequest) {
   const back = (q: string) => NextResponse.redirect(new URL(`/dashboard/billing?${q}`, req.url), 303);
   const mode = paymentsMode();
   if (mode === "off") return back("payments=off");
+  // Plan sales are paused: subscribers can still cancel, resume or open the billing page, but nobody starts or switches.
+  if (!PLAN_SALES_ON && action === "start") return back("payments=off");
   const current = planOf(user);
 
   // Local test mode: no Stripe, change the plan right away.

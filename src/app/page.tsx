@@ -5,12 +5,14 @@ import { parseTrailer } from "@/lib/trailer";
 import { earningGameIds, isVerifiedGame, playQueue } from "@/lib/credits";
 import { getUser } from "@/lib/auth";
 import { Rail } from "@/components/Rail";
-import { ImmersiveHero, TrailerCard, type TrailerGame } from "@/components/TrailerCard";
+import { TrailerCard, type TrailerGame } from "@/components/TrailerCard";
 import { displayName, gameThumbnails } from "@/lib/thumbs";
 import { releaseLabel } from "@/lib/release";
 import { planBadge, planOf, planRank } from "@/lib/plans";
 import { gameRatings } from "@/lib/ratings";
 import { REQUIRED_SECONDS } from "@/lib/money";
+import { CREDITS_ON, VIDEOS_PER_WEEK } from "@/lib/flow";
+import { videoQueue } from "@/lib/videoQueue";
 
 export const dynamic = "force-dynamic";
 
@@ -45,17 +47,17 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
   const { deleted } = await searchParams;
   const now = new Date();
   const user = await getUser();
-  // Games that give THIS player a credit: logged in, the ones they haven't played yet (not their own); logged out, every game with free slots.
-  const earning = user ? new Set((await playQueue(user.id)).map((c) => c.gameId)) : await earningGameIds();
+  // Games that give THIS player a credit (only while credits are on): logged in, the ones they haven't played yet; logged out, every game with free slots.
+  const earning = !CREDITS_ON ? new Set<string>() : user ? new Set((await playQueue(user.id)).map((c) => c.gameId)) : await earningGameIds();
   const earn = (
-    await db.game.findMany({ where: { id: { in: [...earning] }, hiddenAt: null }, orderBy: { createdAt: "desc" }, take: 24, include: withOwner })
+    earning.size ? await db.game.findMany({ where: { id: { in: [...earning] }, hiddenAt: null }, orderBy: { createdAt: "desc" }, take: 24, include: withOwner }) : []
   )
     // Pro and Max games first (their perk), then games with the tracker script.
     .sort((a, b) => planRank(b.owner) - planRank(a.owner) || Number(isVerifiedGame(b)) - Number(isVerifiedGame(a)))
     .map(toCard)
     .map((g) => ({ ...g, earns: true }));
   // "Continue": games this player started and hasn't finished, plus finished plays still waiting for their rating (last 2 days).
-  const openTasks = user
+  const openTasks = user && CREDITS_ON
     ? await db.playTask.findMany({
         where: {
           playerId: user.id,
@@ -74,9 +76,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
     ...toCard(t.game),
     progress: { seconds: t.playedSeconds, required: REQUIRED_SECONDS, done: t.status !== "PENDING", placeId: t.game.placeId },
   }));
-  const featuredRows = await db.game.findMany({ where: { featuredUntil: { gt: now }, hiddenAt: null }, take: 12, include: withOwner });
-  const featured = featuredRows.map(toCard);
-  featured.sort(() => Math.random() - 0.5); // a different featured game leads the hero on each visit
+
+  // Games already played in the TikTok series: the proof that step 3 really happens.
+  const tested = (
+    await db.game.findMany({ where: { hiddenAt: null, seriesTestedAt: { not: null } }, orderBy: { seriesTestedAt: "desc" }, take: 24, include: withOwner })
+  ).map(toCard);
 
   // Not out yet: soonest release first. They join "All games" on their day.
   const soon = (await db.game.findMany({ where: { releaseAt: { gt: now }, hiddenAt: null }, orderBy: { releaseAt: "asc" }, take: 24, include: withOwner })).map((g) => ({
@@ -84,7 +88,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
     release: releaseLabel(g.releaseAt!, now),
   }));
 
-  // Every released game, credit or not. Here the button is always just "Play" (credits live in the row above).
+  // Every released game. Spotlight games (still running from Pro/Max) first, then Max, then games with a trailer.
   const fresh = (
     await db.game.findMany({
       where: { hiddenAt: null, OR: [{ releaseAt: null }, { releaseAt: { lte: now } }] },
@@ -93,14 +97,18 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
       include: withOwner,
     })
   )
-    // Max games sit at the top of All games (their perk), then games with a trailer.
-    .sort((a, b) => Number(planOf(b.owner).topOfAll) - Number(planOf(a.owner).topOfAll) || Number(!!b.trailerUrl) - Number(!!a.trailerUrl))
+    .sort(
+      (a, b) =>
+        Number(!!b.featuredUntil && b.featuredUntil > now) - Number(!!a.featuredUntil && a.featuredUntil > now) ||
+        Number(planOf(b.owner).topOfAll) - Number(planOf(a.owner).topOfAll) ||
+        Number(!!b.trailerUrl) - Number(!!a.trailerUrl),
+    )
     .map(toCard);
 
   // Wide Roblox screenshots for every card on the page (one cached call).
-  const all = [...going, ...featured, ...earn, ...fresh, ...soon];
+  const all = [...going, ...earn, ...tested, ...fresh, ...soon];
   const universe = new Map<string, string | null>();
-  for (const r of [...featuredRows, ...(await db.game.findMany({ where: { id: { in: all.map((g) => g.id) } }, select: { id: true, universeId: true } }))]) universe.set(r.id, r.universeId);
+  for (const r of await db.game.findMany({ where: { id: { in: all.map((g) => g.id) } }, select: { id: true, universeId: true } })) universe.set(r.id, r.universeId);
   const thumbs = await gameThumbnails([...universe.values()]);
   // Star rating and number of ratings replace the Roblox player count, which isn't accurate for small games.
   const ratings = await gameRatings([...universe.keys()]);
@@ -109,46 +117,53 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
     g.rating = ratings.get(g.id) ?? null;
   }
 
-  // Hero: paid featured games first, then games that give credits, then the newest. Up to 5, each with a picture.
-  const heroIds = new Set<string>();
-  const hero = [...featured, ...earn, ...fresh].filter((g) => (g.thumb || g.trailer) && !heroIds.has(g.id) && heroIds.add(g.id)).slice(0, 5);
-
   // Only the first card of each game gets a view-transition name (two elements with one name cancel the animation).
   const named = new Set<string>();
   const vt = (list: TrailerGame[]) => list.map((g) => (named.has(g.id) ? g : (named.add(g.id), { ...g, vt: true })));
   const goingRow = vt(going);
   const earnRow = vt(earn);
+  const testedRow = vt(tested);
   const freshRow = vt(fresh);
   const soonRow = vt(soon);
+
+  // The one button: where a dev goes next depends on how far they are.
+  const hasGame = user ? (await db.game.count({ where: { ownerId: user.id } })) > 0 : false;
+  const cta = !user ? { href: "/signup", label: "Add your game" } : hasGame ? { href: "/dashboard", label: "See your place in line" } : { href: "/dashboard/games/new", label: "Add your game" };
+  const inLine = (await videoQueue()).length;
 
   return (
     <div className="-mb-8 space-y-14 sm:-mb-12 sm:space-y-16">
 
-      {hero.length > 0 ? (
-        <div className="-mt-[5.5rem] sm:-mt-[6.5rem]">
-          <ImmersiveHero games={hero} />
+      <section aria-labelledby="hero-title" className="relative -mt-2 sm:-mt-4">
+        <div aria-hidden className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-lime/10 blur-3xl" />
+        <p className="relative font-mono text-xs font-medium uppercase tracking-[.1em] text-lime">Free for Roblox developers</p>
+        <h1 id="hero-title" className="relative mt-3 max-w-3xl font-display text-[38px] font-extrabold leading-[1.02] tracking-[-0.03em] sm:text-[60px]">
+          Add your Roblox game. <span className="text-lime drop-shadow-[0_0_24px_rgba(200,240,49,.35)]">We play it on TikTok.</span>
+        </h1>
+        <p className="relative mt-4 max-w-xl text-[17px] leading-relaxed text-mute">
+          We test new Roblox games in our TikTok series and show them to real players. You just paste the link.
+        </p>
+        <div className="relative mt-7 flex flex-wrap items-center gap-x-5 gap-y-3">
+          <Link href={cta.href} className="btn h-12 px-6 text-[15px]">{cta.label} <ArrowRight className="h-4 w-4" /></Link>
+          <span className="text-sm text-faint">Free. Takes about a minute.</span>
         </div>
-      ) : (
-        <section className="-mt-2 sm:-mt-4">
-          <h1 className="max-w-2xl text-[32px] font-semibold leading-[1.06] tracking-[-0.035em] sm:text-[44px]">
-            New Roblox games, <span className="text-faint">before they blow up.</span>
-          </h1>
-          <p className="mt-3 max-w-md text-mute">Watch trailers and play new games. Developers play each other&apos;s games to get real players.</p>
-          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-            <Link href="#earn-title" className="btn">Play &amp; earn credits</Link>
-            <Link href="/how-it-works" className="link">How it works <ArrowRight className="h-3.5 w-3.5" /></Link>
-          </div>
-        </section>
-      )}
+        <ol className="relative mt-12 grid gap-8 border-t border-line pt-8 sm:grid-cols-3">
+          {([
+            ["Sign up", "Free, with your email."],
+            ["Add your game", "Paste the Roblox link. Add your TikTok so we can tag you."],
+            ["We play it on TikTok", `About ${VIDEOS_PER_WEEK} games a week, in the order they were added.${inLine ? ` ${inLine} ${inLine === 1 ? "game is" : "games are"} in line now.` : ""}`],
+          ] as const).map(([t, d], i) => (
+            <li key={t}>
+              <div className="font-mono text-[32px] leading-none tabular-nums text-lime-ink">0{i + 1}</div>
+              <div className="mt-4 font-semibold">{t}</div>
+              <p className="mt-1 text-sm text-mute">{d}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
 
       <div className="relative z-10 space-y-12 sm:space-y-14">
       {deleted && <p role="status" className="notice">Your account was deleted.</p>}
-      {hero.length > 0 && (
-        <p className="-mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-line pb-5 text-sm text-mute sm:-mt-6">
-          <span><span className="font-semibold text-cream">New Roblox games, before they blow up.</span> Developers play each other&apos;s games to get real players.</span>
-          <Link href="/how-it-works" className="link">How it works <ArrowRight className="h-3.5 w-3.5" /></Link>
-        </p>
-      )}
 
       {goingRow.length > 0 && (
         <section aria-labelledby="continue-title">
@@ -161,21 +176,32 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
         </section>
       )}
 
-      <section aria-labelledby="earn-title">
-        <Head id="earn-title" eyebrow="01 — Earn" accent title="Play & earn credits" sub="Play 10 minutes, get 1 credit, worth 1 real player for your game.">
-          <Link href="/play" className="link-accent">My progress <ArrowRight className="h-3.5 w-3.5" /></Link>
-        </Head>
-        {earn.length === 0 ? (
-          <p className="text-sm text-mute">No games give you a credit right now. New ones arrive all the time.</p>
-        ) : (
-          <Rail label="Games that give credits">
-            {earnRow.map((g) => <TrailerCard key={g.id} game={g} />)}
+      {CREDITS_ON && (
+        <section aria-labelledby="earn-title">
+          <Head id="earn-title" accent title="Play & earn credits" sub="Play 10 minutes, get 1 credit, worth 1 real player for your game.">
+            <Link href="/play" className="link-accent">My progress <ArrowRight className="h-3.5 w-3.5" /></Link>
+          </Head>
+          {earn.length === 0 ? (
+            <p className="text-sm text-mute">No games give you a credit right now. New ones arrive all the time.</p>
+          ) : (
+            <Rail label="Games that give credits">
+              {earnRow.map((g) => <TrailerCard key={g.id} game={g} />)}
+            </Rail>
+          )}
+        </section>
+      )}
+
+      {testedRow.length > 0 && (
+        <section aria-labelledby="tested-title">
+          <Head id="tested-title" accent title="Played on our TikTok" sub="Games we already tested in the series." />
+          <Rail label="Played on our TikTok">
+            {testedRow.map((g) => <TrailerCard key={g.id} game={g} />)}
           </Rail>
-        )}
-      </section>
+        </section>
+      )}
 
       <section aria-labelledby="all-title">
-        <Head id="all-title" eyebrow="02 — All" title="All games" sub="Every game on Spawnswap. Play anything you like." />
+        <Head id="all-title" title="All games" sub="Every game on Spawnswap. Play anything you like." />
         {fresh.length === 0 ? (
           <p className="text-sm text-mute">
             Nothing here yet. <Link href="/signup" className="text-lime underline underline-offset-4">Add the first game.</Link>
@@ -189,7 +215,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
 
       {soon.length > 0 && (
         <section aria-labelledby="soon-title">
-          <Head id="soon-title" eyebrow="03 — Soon" title="Coming soon" sub="Games with a release date. Watch the trailer now, play on launch day." />
+          <Head id="soon-title" title="Coming soon" sub="Games with a release date. Watch the trailer now, play on launch day." />
           <Rail label="Coming soon">
             {soonRow.map((g) => <TrailerCard key={g.id} game={g} />)}
           </Rail>
@@ -197,34 +223,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
       )}
 
       </div>
-
-      {/* Developer band: full width, a shade darker than the page, with a hairline on top. */}
-      <section className="relative left-1/2 w-screen -translate-x-1/2 border-t border-line bg-navy-deep/70 text-cream">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-[1fr_2fr]">
-          <div>
-            <p className="font-mono text-[11px] font-medium uppercase tracking-[.08em] text-lime-ink">For developers</p>
-            <h2 className="mt-2 text-[28px] font-semibold leading-[1.1] tracking-[-0.03em]">Your first 100 real players.</h2>
-            <p className="mt-2 max-w-sm text-sm text-mute">Play other games to earn credits. Each credit brings one real player to yours.</p>
-            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-              <Link href="/signup" className="btn">Get players</Link>
-              <Link href="/how-it-works" className="inline-flex items-center gap-1 text-sm font-medium text-mute transition hover:text-cream">How it works <ArrowRight className="h-3.5 w-3.5" /></Link>
-            </div>
-          </div>
-          <ol className="grid gap-8 sm:grid-cols-3">
-            {([
-              ["Add your game", "Paste the Roblox link. It shows on the site right away."],
-              ["Earn credits", "Play other games for 10 minutes. Each one earns 1 credit."],
-              ["Get real players", "Each credit brings one real player who plays 10+ minutes."],
-            ] as const).map(([t, d], i) => (
-              <li key={t}>
-                <div className="font-mono text-[32px] leading-none tabular-nums text-lime-ink">0{i + 1}</div>
-                <div className="mt-4 font-semibold">{t}</div>
-                <p className="mt-1 text-sm text-mute">{d}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
     </div>
   );
 }
