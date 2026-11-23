@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { addGame } from "@/app/actions";
 import { Form } from "@/components/Form";
+import { VIDEOS_PER_WEEK } from "@/lib/flow";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export default async function NewGame() {
       <div>
         <p className="eyebrow">Add game</p>
         <h1 className="mt-1 page-title">Paste your Roblox link</h1>
-        <p className="mt-2 text-sm text-mute">Name, icon and player count come in automatically. Your game shows on the site right away.</p>
+        <p className="mt-2 text-sm text-mute">Name and icon come in automatically. Your game goes into our video line right away: we play about {VIDEOS_PER_WEEK} games a week on TikTok, in order.</p>
       </div>
       <Form action={addGame} submit="Add game">
         <div>
@@ -26,18 +27,10 @@ export default async function NewGame() {
             <p>Or in Creator Dashboard, click the <span className="text-cream">⋯</span> on your game and choose <span className="text-cream">Copy URL</span>. The number alone (the place ID) works too.</p>
           </div>
         </div>
-        <div className="group space-y-3">
-          <label className="flex items-start gap-3 text-sm text-mute">
-            <input name="wantsVideo" type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-[#c8f031]" />
-            <span>
-              <span className="text-cream">Want a video?</span> We may play your game in our TikTok series, for free. We can&apos;t promise every game, but we pick from these first.
-            </span>
-          </label>
-          <div className="hidden pl-8 group-has-[:checked]:block">
-            <label htmlFor="tiktok" className="label">Your TikTok username <span className="font-normal text-mute">optional</span></label>
-            <input id="tiktok" name="tiktok" maxLength={60} placeholder="@yourname" autoComplete="off" className="input" />
-            <p className="mt-1.5 text-xs text-mute">So we can tag you in the video.</p>
-          </div>
+        <div>
+          <label htmlFor="tiktok" className="label">Your TikTok username <span className="font-normal text-mute">optional</span></label>
+          <input id="tiktok" name="tiktok" maxLength={60} placeholder="@yourname" autoComplete="off" className="input" />
+          <p className="mt-1.5 text-xs text-mute">So we can tag you when we play your game on TikTok.</p>
         </div>
       </Form>
     </div>

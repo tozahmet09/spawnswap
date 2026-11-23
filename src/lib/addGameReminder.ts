@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "./db";
 import { emailEnabled, sendEmail } from "./email";
+import { CREDITS_ON, VIDEOS_PER_WEEK } from "./flow";
 import { siteBase, unsubToken, unsubUrl } from "./weeklyReport";
 
 /**
@@ -24,15 +25,23 @@ export function buildAddGameReminder(user: { id: string; email: string; displayN
   const apiUnsub = `${base}/api/unsubscribe?u=${encodeURIComponent(user.id)}&t=${unsubToken(user.id)}`;
   const n = Math.max(1, user.credits);
   const credits = n === 1 ? "1 credit" : `${n} credits`;
-  const subject = `Your ${credits} ${n === 1 ? "is" : "are"} ready to bring players`;
+  const subject = CREDITS_ON ? `Your ${credits} ${n === 1 ? "is" : "are"} ready to bring players` : "Add your game and we'll play it on TikTok";
+  const title = CREDITS_ON ? `Your ${credits} ${n === 1 ? "is" : "are"} ready` : "We want to play your game";
+  const tagline = CREDITS_ON ? "They start bringing players once your game is in." : "On TikTok, in front of real players. Free.";
+  const lines = CREDITS_ON
+    ? [`Thanks for joining Spawnswap. You have ${credits} in your account, but no game to send players to yet.`, "Each credit brings one real player who plays your game for 10+ minutes."]
+    : [
+        "Thanks for joining Spawnswap. You haven't added your game yet.",
+        `Once it's in, it goes into our video line: we play about ${VIDEOS_PER_WEEK} games a week in our TikTok series and show them to real players.`,
+      ];
 
   const text = [
     `Hi ${user.displayName},`,
     "",
-    `Thanks for joining Spawnswap. You have ${credits} in your account, but no game to send players to yet.`,
+    lines[0],
     "",
-    "Each credit brings one real player who plays your game for 10+ minutes.",
-    "Add your game and they start working.",
+    lines[1],
+    CREDITS_ON ? "Add your game and they start working." : "",
     "",
     `Add your game (just paste the Roblox link): ${add}`,
     "",
@@ -44,13 +53,13 @@ export function buildAddGameReminder(user: { id: string; email: string; displayN
   const lime = "#c8f031";
   const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;color:#0b1426">
 <div style="background:#0b1426;color:#fff;padding:22px 24px;border-radius:12px">
-  <div style="font-size:13px;color:${lime};font-weight:700;letter-spacing:.04em">SPAWNSWAP · YOUR CREDITS</div>
-  <div style="margin-top:6px;font-size:26px;font-weight:800">Your ${credits} ${n === 1 ? "is" : "are"} ready</div>
-  <div style="margin-top:4px;font-size:14px;color:#cbd5e1">They start bringing players once your game is in.</div>
+  <div style="font-size:13px;color:${lime};font-weight:700;letter-spacing:.04em">SPAWNSWAP</div>
+  <div style="margin-top:6px;font-size:26px;font-weight:800">${title}</div>
+  <div style="margin-top:4px;font-size:14px;color:#cbd5e1">${tagline}</div>
 </div>
 <p style="font-size:14px;margin:18px 0 4px">Hi ${esc(user.displayName)},</p>
-<p style="font-size:14px;line-height:1.55;color:#334155">Thanks for joining Spawnswap. You have ${credits} in your account, but no game to send players to yet.
-Each credit brings one real player who plays your game for 10+ minutes.</p>
+<p style="font-size:14px;line-height:1.55;color:#334155">${lines[0]}
+${lines[1]}</p>
 <div style="margin-top:16px"><a href="${add}" style="display:inline-block;padding:12px 20px;background:${lime};color:#061427;border-radius:8px;text-decoration:none;font-weight:700">Add my game</a></div>
 <p style="font-size:13px;color:#64748b;margin-top:10px">Takes about a minute. Just paste the Roblox link.</p>
 <p style="margin-top:22px;font-size:12px;color:#94a3b8">You get this because you made a Spawnswap account. <a href="${unsub}" style="color:#94a3b8">Stop these emails</a>.</p>
@@ -69,7 +78,8 @@ Each credit brings one real player who plays your game for 10+ minutes.</p>
 export async function sendAddGameReminders(now = new Date()) {
   if (!emailEnabled()) return { sent: 0, skipped: 0, failed: 0, note: "RESEND_API_KEY not set" };
   const due = {
-    credits: { gt: 0 },
+    // With credits on: only people whose credits are waiting. Without: every dev who hasn't added a game.
+    ...(CREDITS_ON ? { credits: { gt: 0 } } : { role: "DEV" }),
     weeklyReport: true,
     addGameReminderAt: null,
     games: { none: {} },

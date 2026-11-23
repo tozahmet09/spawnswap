@@ -21,6 +21,7 @@ import { emailEnabled, sendEmail } from "@/lib/email";
 import { operator } from "@/lib/legal";
 import { daysUntil, parseReleaseDate } from "@/lib/release";
 import { PLANS, planOf } from "@/lib/plans";
+import { CREDITS_ON, PLAN_SALES_ON } from "@/lib/flow";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -51,6 +52,8 @@ export async function signup(_: FormState, f: FormData): Promise<FormState> {
   // Creators start by posting their listing on the Social media tab. Welcome credits are for games, so they
   // are paid the first time the account opens My Games (any account can be a dev and a creator).
   if (role === "CREATOR") redirect("/social/profile?new=1");
+  // Simple flow: the one thing a new dev does is add their game.
+  if (!CREDITS_ON) redirect("/dashboard/games/new");
   // Welcome credits right away; the dashboard plays the welcome moment for them.
   const welcome = await payWelcomeBonus(user.id);
   redirect(welcome ? "/dashboard?welcome=1" : "/dashboard");
@@ -260,8 +263,8 @@ export async function addGame(_: FormState, f: FormData): Promise<FormState> {
   if (!placeId) return { error: "That doesn't look like a Roblox game link. Open your game on roblox.com and copy the address, like https://www.roblox.com/games/123456789/My-Game" };
   if (!(await rateLimit(`addgame:${user.id}`, 10, 3600e3))) return { error: TOO_FAST };
 
-  const wantsVideo = !!f.get("wantsVideo");
-  const tiktok = wantsVideo ? parseTiktokHandle(str(f, "tiktok")) : "";
+  // Every game goes into the video line now; the TikTok username is only for tagging.
+  const tiktok = parseTiktokHandle(str(f, "tiktok"));
   if (tiktok === null) return { error: TIKTOK_ERROR };
 
   const existing = await db.game.findUnique({ where: { placeId } });
@@ -269,6 +272,7 @@ export async function addGame(_: FormState, f: FormData): Promise<FormState> {
   // Game limit per plan. Archived games count; delete one to make room. Games added before plans existed stay.
   const plan = planOf(user);
   if ((await db.game.count({ where: { ownerId: user.id } })) >= plan.maxGames) {
+    if (!PLAN_SALES_ON) return { error: `You can add up to ${plan.maxGames} games. Delete one from My Games to add another.` };
     const next = plan.id === "FREE" ? PLANS.PRO : PLANS.MAX;
     return { error: `Your ${plan.name} plan has room for ${plan.maxGames} games. Delete one, or get ${next.name} for up to ${Number.isFinite(next.maxGames) ? next.maxGames : "unlimited"} games on the Pricing page.` };
   }
@@ -298,7 +302,7 @@ export async function addGame(_: FormState, f: FormData): Promise<FormState> {
       playing: info.playing,
       visits: info.visits,
       genre: info.genre,
-      wantsVideoAt: wantsVideo ? new Date() : null,
+      wantsVideoAt: new Date(),
       tiktokHandle: tiktok || null,
     },
   });
@@ -463,7 +467,7 @@ export async function setWantsVideo(_: FormState, f: FormData): Promise<FormStat
   revalidatePath(`/dashboard/games/${game.id}`);
   revalidatePath("/admin/series");
   if (!on) return { ok: "Request cancelled." };
-  return { ok: game.wantsVideoAt ? "Saved." : "Got it. Your game is on our list." };
+  return { ok: "Saved." };
 }
 
 export async function setTrailer(_: FormState, f: FormData): Promise<FormState> {

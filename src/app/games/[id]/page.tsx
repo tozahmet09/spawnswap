@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { getUser } from "@/lib/auth";
 import { parseTrailer } from "@/lib/trailer";
 import { earningGameIds, isVerifiedGame } from "@/lib/credits";
+import { CREDITS_ON } from "@/lib/flow";
 import { robloxAvatars } from "@/lib/avatars";
 import { publicName } from "@/lib/community";
 import { playGame } from "@/app/actions";
@@ -75,7 +76,7 @@ export default async function GamePublic({ params }: { params: Promise<{ id: str
   const devAvatar = game.owner.robloxVerified && game.owner.robloxUserId ? avatars.get(game.owner.robloxUserId) : undefined;
   const isOwner = user?.id === game.ownerId;
   const upcoming = isUpcoming(game.releaseAt);
-  const earns = earning.has(game.id) && !isOwner;
+  const earns = CREDITS_ON && earning.has(game.id) && !isOwner;
   const devName = publicName(game.owner);
   const ratingCount = byStars.reduce((n, r) => n + r._count._all, 0);
   const starCount = (n: number) => byStars.find((r) => r.rating === n)?._count._all ?? 0;

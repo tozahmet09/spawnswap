@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { PLAN_SALES_ON } from "@/lib/flow";
 import { Check } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { fmt } from "@/lib/money";
@@ -11,6 +13,8 @@ export const metadata = {
 };
 
 export default async function Pricing() {
+  // Paid plans are paused: SpawnSwap is free, so the page explaining it is How it works.
+  if (!PLAN_SALES_ON) redirect("/how-it-works");
   const user = await getUser();
   const current = user ? planOf(user) : null;
 

@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Spawnswap: new Roblox games, before they blow up";
+export const alt = "Spawnswap: add your Roblox game, we play it on TikTok";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -14,11 +14,11 @@ export default function OgImage() {
           Spawnswap
         </div>
         <div style={{ display: "flex", flexDirection: "column", fontSize: 76, fontWeight: 700, lineHeight: 1.05, letterSpacing: -2 }}>
-          <div>New Roblox games,</div>
-          <div style={{ color: "#bdb6ab" }}>before they blow up.</div>
+          <div>Add your Roblox game.</div>
+          <div style={{ color: "#c8f031" }}>We play it on TikTok.</div>
         </div>
         <div style={{ display: "flex", fontSize: 28, color: "#bdb6ab" }}>
-          <span style={{ color: "#c8f031", marginRight: 12 }}>Play 10 min = 1 credit.</span> 1 credit = 1 real player for your game.
+          <span style={{ color: "#c8f031", marginRight: 12 }}>Free.</span> Sign up, paste your Roblox link, we show it to real players.
         </div>
       </div>
     ),
